@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Top-Down Shooter</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            touch-action: none;
+        }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    const STATES = { START: 'start', PLAYING: 'playing', DEAD: 'dead' };
+    let state = STATES.START;
+    let player, bullets, enemies, score, lives, spawnTimer, spawnInterval;
+
+    function initGame() {
+        player = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            radius: 18,
+            speed: 4,
+            angle: 0,
+            shootCooldown: 0,
+            shootRate: 15,
+            invincible: 0
+        };
+        bullets = [];
+        enemies = [];
+        score = 0;
+        lives = 3;
+        spawnTimer = 0;
+        spawnInterval = 120;
+        state = STATES.PLAYING;
+    }
+
+    // Touch controls
+    let joystick = { active: false, id: null, startX: 80, startY: 0, dx: 0, dy: 0 };
+    let shootBtn = { active: false, id: null };
+    const JOYSTICK_RADIUS = 60;
+    const SHOOT_BTN_RADIUS = 45;
+
+    function getShootBtnPos() {
+        return { x: canvas.width - 90, y: canvas.height - 90 };
+    }
+    function getJoystickBase() {
+        return { x: 90, y: canvas.height - 90 };
+    }
+
+    canvas.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        if (state !== STATES.PLAYING) { initGame(); return; }
+        for (let touch of e.changedTouches) {
+            const btn = getShootBtnPos();
+            const ddx = touch.clientX - btn.x;
+            const ddy = touch.clientY - btn.y;
+            if (Math.hypot(ddx, ddy) < SHOOT_BTN_RADIUS + 30) {
+                shootBtn.active = true;
+                shootBtn.id = touch.identifier;
+            } else if (!joystick.active) {
+                joystick.active = true;
+                joystick.id = touch.identifier;
+                joystick.startX = touch.clientX;
+                joystick.startY = touch.clientY;
+                joystick.dx = 0;
+                joystick.dy = 0;
+            }
+        }
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        for (let touch of e.changedTouches) {
+            if (touch.identifier === joystick.id) {
+                joystick.dx = touch.clientX - joystick.startX;
+                joystick.dy = touch.clientY - joystick.startY;
+                const len = Math.hypot(joystick.dx, joystick.dy);
+                if (len > JOYSTICK_RADIUS) {
+                    joystick.dx = (joystick.dx / len) * JOYSTICK_RADIUS;
+                    joystick.dy = (joystick.dy / len) * JOYSTICK_RADIUS;
+                }
+            }
+        }
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        for (let touch of e.changedTouches) {
+            if (touch.identifier === joystick.id) {
+                joystick.active = false;
+                joystick.dx = 0;
+                joystick.dy = 0;
+            }
+            if (touch.identifier === shootBtn.id) {
+                shootBtn.active = false;
+            }
+        }
+    }, { passive: false });
+
+    const keys = {};
+    window.addEventListener('keydown', e => {
+        keys[e.key] = true;
+        if ((e.key === ' ' || e.key === 'Enter') && state !== STATES.PLAYING) initGame();
+    });
+    window.addEventListener('keyup', e => keys[e.key] = false);
+
+    canvas.addEventListener('click', () => {
+        if (state !== STATES.PLAYING) initGame();
+    });
+
+    function spawnEnemy() {
+        const side = Math.floor(Math.random() * 4);
+        let x, y;
+        if (side === 0) { x = Math.random() * canvas.width; y = -20; }
+        else if (side === 1) { x = canvas.width + 20; y = Math.random() * canvas.height; }
+        else if (side === 2) { x = Math.random() * canvas.width; y = canvas.height + 20; }
+        else { x = -20; y = Math.random() * canvas.height; }
+        enemies.push({ x, y, radius: 14, speed: 1.2 + Math.random() * 1.8, hp: 1 });
+    }
+
+    function shoot() {
+        if (player.shootCooldown > 0) return;
+        player.shootCooldown = player.shootRate;
+        bullets.push({
+            x: player.x + Math.cos(player.angle) * player.radius,
+            y: player.y + Math.sin(player.angle) * player.radius,
+            dx: Math.cos(player.angle) * 9,
+            dy: Math.sin(player.angle) * 9,
+            radius: 5,
+            life: 80
+        });
+    }
+
+    function update() {
+        if (state !== STATES.PLAYING) return;
+
+        let moveX = 0, moveY = 0;
+        if (keys['ArrowUp'] || keys['w']) moveY -= 1;
+        if (keys['ArrowDown'] || keys['s']) moveY += 1;
+        if (keys['ArrowLeft'] || keys['a']) moveX -= 1;
+        if (keys['ArrowRight'] || keys['d']) moveX += 1;
+
+        if (joystick.active || (joystick.dx !== 0 || joystick.dy !== 0)) {
+            moveX = joystick.dx / JOYSTICK_RADIUS;
+            moveY = joystick.dy / JOYSTICK_RADIUS;
+        }
+
+        const moveLen = Math.hypot(moveX, moveY);
+        if (moveLen > 0) {
+            moveX /= moveLen;
+            moveY /= moveLen;
+            player.x += moveX * player.speed;
+            player.y += moveY * player.speed;
+        }
+
+        // Auto-aim at nearest enemy
+        if (enemies.length > 0) {
+            let nearest = null, nearestDist = Infinity;
+            for (let e of enemies) {
+                const d = Math.hypot(e.x - player.x, e.y - player.y);
+                if (d < nearestDist) { nearestDist = d; nearest = e; }
+            }
+            if (nearest) player.angle = Math.atan2(nearest.y - player.y, nearest.x - player.x);
+        }
+
+        player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
+        player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y));
+
+        if (keys[' '] || keys['z'] || shootBtn.active) shoot();
+        if (player.shootCooldown > 0) player.shootCooldown--;
+        if (player.invincible > 0) player.invincible--;
+
+        bullets = bullets.filter(b => b.life > 0);
+        for (let b of bullets) { b.x += b.dx; b.y += b.dy; b.life--; }
+
+        spawnTimer++;
+        if (spawnTimer >= spawnInterval) {
+            spawnTimer = 0;
+            spawnEnemy();
+            if (score > 5) spawnEnemy();
+            if (score > 15) spawnEnemy();
+            if (spawnInterval > 40) spawnInterval -= 1;
+        }
+
+        for (let e of enemies) {
+            const dx = player.x - e.x;
+            const dy = player.y - e.y;
+            const len = Math.hypot(dx, dy);
+            e.x += (dx / len) * e.speed;
+            e.y += (dy / len) * e.speed;
+        }
+
+        for (let b of bullets) {
+            for (let e of enemies) {
+                if (Math.hypot(b.x - e.x, b.y - e.y) < b.radius + e.radius) {
+                    b.life = 0;
+                    e.hp--;
+                    if (e.hp <= 0) score++;
+                }
+            }
+        }
+        enemies = enemies.filter(e => e.hp > 0);
+
+        if (player.invincible === 0) {
+            for (let e of enemies) {
+                if (Math.hypot(player.x - e.x, player.y - e.y) < player.radius + e.radius - 4) {
+                    lives--;
+                    player.invincible = 90;
+                    enemies = enemies.filter(en => en !== e);
+                    if (lives <= 0) state = STATES.DEAD;
+                    break;
+                }
+            }
+        }
+    }
+
+    function drawHeart(x, y, size, filled) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.beginPath();
+        ctx.moveTo(0, size * 0.3);
+        ctx.bezierCurveTo(-size * 0.5, -size * 0.3, -size, size * 0.1, 0, size);
+        ctx.bezierCurveTo(size, size * 0.1, size * 0.5, -size * 0.3, 0, size * 0.3);
+        ctx.fillStyle = filled ? '#ff4444' : '#333';
+        ctx.fill();
+        ctx.restore();
+    }
+
+    function draw() {
+        ctx.fillStyle = '#0a0a1a';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Grid
+        ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+        ctx.lineWidth = 1;
+        for (let x = 0; x < canvas.width; x += 50) {
+            ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+        }
+        for (let y = 0; y < canvas.height; y += 50) {
+            ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+        }
+
+        if (state === STATES.START) {
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#4fc3f7';
+            ctx.font = 'bold 38px monospace';
+            ctx.fillText('TOP-DOWN SHOOTER', canvas.width / 2, canvas.height / 2 - 50);
+            ctx.fillStyle = '#aaa';
+            ctx.font = '20px monospace';
+            ctx.fillText('Tap or press Enter to start', canvas.width / 2, canvas.height / 2 + 10);
+            ctx.font = '16px monospace';
+            ctx.fillStyle = '#666';
+            ctx.fillText('Move: WASD / Left joystick', canvas.width / 2, canvas.height / 2 + 50);
+            ctx.fillText('Shoot: SPACE / FIRE button', canvas.width / 2, canvas.height / 2 + 78);
+            return;
+        }
+
+        // Bullets
+        for (let b of bullets) {
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffe066';
+            ctx.shadowBlur = 12;
+            ctx.shadowColor = '#ffe066';
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        }
+
+        // Enemies
+        for (let e of enemies) {
+            ctx.beginPath();
+            ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
+            ctx.fillStyle = '#ff3333';
+            ctx.shadowBlur = 14;
+            ctx.shadowColor = '#ff0000';
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(e.x - 4, e.y - 3, 3, 0, Math.PI * 2);
+            ctx.arc(e.x + 4, e.y - 3, 3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#000';
+            ctx.beginPath();
+            ctx.arc(e.x - 4, e.y - 3, 1.5, 0, Math.PI * 2);
+            ctx.arc(e.x + 4, e.y - 3, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Player
+        const alpha = player.invincible > 0 ? (Math.floor(player.invincible / 5) % 2 === 0 ? 0.3 : 1) : 1;
+        ctx.globalAlpha = alpha;
+        ctx.save();
+        ctx.translate(player.x, player.y);
+        ctx.rotate(player.angle);
+        ctx.beginPath();
+        ctx.arc(0, 0, player.radius, 0, Math.PI * 2);
+        ctx.fillStyle = '#4fc3f7';
+        ctx.shadowBlur = 16;
+        ctx.shadowColor = '#4fc3f7';
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#81d4fa';
+        ctx.fillRect(2, -5, player.radius + 6, 10);
+        ctx.restore();
+        ctx.globalAlpha = 1;
+
+        // HUD
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 22px monospace';
+        ctx.textAlign = 'left';
+        ctx.fillText('SCORE: ' + score, 16, 36);
+        for (let i = 0; i < 3; i++) {
+            drawHeart(canvas.width - 28 - i * 36, 16, 10, i < lives);
+        }
+
+        // Joystick
+        const jbase = joystick.active
+            ? { x: joystick.startX, y: joystick.startY }
+            : getJoystickBase();
+        ctx.beginPath();
+        ctx.arc(jbase.x, jbase.y, JOYSTICK_RADIUS, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(255,255,255,0.05)';
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(jbase.x + joystick.dx, jbase.y + joystick.dy, 26, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.28)';
+        ctx.fill();
+
+        // Fire button
+        const btn = getShootBtnPos();
+        ctx.beginPath();
+        ctx.arc(btn.x, btn.y, SHOOT_BTN_RADIUS, 0, Math.PI * 2);
+        ctx.fillStyle = shootBtn.active ? 'rgba(255,200,0,0.55)' : 'rgba(255,200,0,0.18)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,200,0,0.7)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.fillStyle = '#ffe066';
+        ctx.font = 'bold 15px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('FIRE', btn.x, btn.y + 5);
+
+        // Game Over
+        if (state === STATES.DEAD) {
+            ctx.fillStyle = 'rgba(0,0,0,0.72)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#ff4444';
+            ctx.font = 'bold 48px monospace';
+            ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 50);
+            ctx.fillStyle = '#fff';
+            ctx.font = '28px monospace';
+            ctx.fillText('Score: ' + score, canvas.width / 2, canvas.height / 2 + 10);
+            ctx.fillStyle = '#aaa';
+            ctx.font = '20px monospace';
+            ctx.fillText('Tap to restart', canvas.width / 2, canvas.height / 2 + 55);
+        }
+    }
+
+    function gameLoop() {
+        update();
+        draw();
+        requestAnimationFrame(gameLoop);
+    }
+
+    gameLoop();
+</script>
+</body>
+</html>
