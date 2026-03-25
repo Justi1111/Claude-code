@@ -33,18 +33,27 @@
 
     const STATES = { START: 'start', PLAYING: 'playing', DEAD: 'dead' };
     let state = STATES.START;
-    let player, bullets, enemies, score, lives, spawnTimer, spawnInterval;
+
+    const WORLD_W = 4000;
+    const WORLD_H = 4000;
+    const TILE_SIZE = 64;
+
+    let player, bullets, enemies, score, lives, spawnTimer, spawnInterval, camera;
 
     function initGame() {
         player = {
-            x: canvas.width / 2,
-            y: canvas.height / 2,
+            x: WORLD_W / 2,
+            y: WORLD_H / 2,
             radius: 18,
             speed: 4,
             angle: 0,
             shootCooldown: 0,
             shootRate: 15,
             invincible: 0
+        };
+        camera = {
+            x: WORLD_W / 2 - canvas.width / 2,
+            y: WORLD_H / 2 - canvas.height / 2
         };
         bullets = [];
         enemies = [];
@@ -56,7 +65,7 @@
     }
 
     // Touch controls
-    let joystick = { active: false, id: null, startX: 80, startY: 0, dx: 0, dy: 0 };
+    let joystick = { active: false, id: null, startX: 0, startY: 0, dx: 0, dy: 0 };
     let shootBtn = { active: false, id: null };
     const JOYSTICK_RADIUS = 60;
     const SHOOT_BTN_RADIUS = 45;
@@ -64,18 +73,13 @@
     function getShootBtnPos() {
         return { x: canvas.width - 90, y: canvas.height - 90 };
     }
-    function getJoystickBase() {
-        return { x: 90, y: canvas.height - 90 };
-    }
 
     canvas.addEventListener('touchstart', (e) => {
         e.preventDefault();
         if (state !== STATES.PLAYING) { initGame(); return; }
         for (let touch of e.changedTouches) {
             const btn = getShootBtnPos();
-            const ddx = touch.clientX - btn.x;
-            const ddy = touch.clientY - btn.y;
-            if (Math.hypot(ddx, ddy) < SHOOT_BTN_RADIUS + 30) {
+            if (Math.hypot(touch.clientX - btn.x, touch.clientY - btn.y) < SHOOT_BTN_RADIUS + 30) {
                 shootBtn.active = true;
                 shootBtn.id = touch.identifier;
             } else if (!joystick.active) {
@@ -124,18 +128,13 @@
         if ((e.key === ' ' || e.key === 'Enter') && state !== STATES.PLAYING) initGame();
     });
     window.addEventListener('keyup', e => keys[e.key] = false);
-
-    canvas.addEventListener('click', () => {
-        if (state !== STATES.PLAYING) initGame();
-    });
+    canvas.addEventListener('click', () => { if (state !== STATES.PLAYING) initGame(); });
 
     function spawnEnemy() {
-        const side = Math.floor(Math.random() * 4);
-        let x, y;
-        if (side === 0) { x = Math.random() * canvas.width; y = -20; }
-        else if (side === 1) { x = canvas.width + 20; y = Math.random() * canvas.height; }
-        else if (side === 2) { x = Math.random() * canvas.width; y = canvas.height + 20; }
-        else { x = -20; y = Math.random() * canvas.height; }
+        const angle = Math.random() * Math.PI * 2;
+        const dist = Math.max(canvas.width, canvas.height) * 0.65;
+        const x = Math.max(20, Math.min(WORLD_W - 20, player.x + Math.cos(angle) * dist));
+        const y = Math.max(20, Math.min(WORLD_H - 20, player.y + Math.sin(angle) * dist));
         enemies.push({ x, y, radius: 14, speed: 1.2 + Math.random() * 1.8, hp: 1 });
     }
 
@@ -148,7 +147,7 @@
             dx: Math.cos(player.angle) * 9,
             dy: Math.sin(player.angle) * 9,
             radius: 5,
-            life: 80
+            life: 110
         });
     }
 
@@ -161,17 +160,15 @@
         if (keys['ArrowLeft'] || keys['a']) moveX -= 1;
         if (keys['ArrowRight'] || keys['d']) moveX += 1;
 
-        if (joystick.active || (joystick.dx !== 0 || joystick.dy !== 0)) {
+        if (joystick.active || joystick.dx !== 0 || joystick.dy !== 0) {
             moveX = joystick.dx / JOYSTICK_RADIUS;
             moveY = joystick.dy / JOYSTICK_RADIUS;
         }
 
         const moveLen = Math.hypot(moveX, moveY);
         if (moveLen > 0) {
-            moveX /= moveLen;
-            moveY /= moveLen;
-            player.x += moveX * player.speed;
-            player.y += moveY * player.speed;
+            player.x += (moveX / moveLen) * player.speed;
+            player.y += (moveY / moveLen) * player.speed;
         }
 
         // Auto-aim at nearest enemy
@@ -184,8 +181,14 @@
             if (nearest) player.angle = Math.atan2(nearest.y - player.y, nearest.x - player.x);
         }
 
-        player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
-        player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y));
+        player.x = Math.max(player.radius, Math.min(WORLD_W - player.radius, player.x));
+        player.y = Math.max(player.radius, Math.min(WORLD_H - player.radius, player.y));
+
+        // Camera follows player
+        camera.x = player.x - canvas.width / 2;
+        camera.y = player.y - canvas.height / 2;
+        camera.x = Math.max(0, Math.min(WORLD_W - canvas.width, camera.x));
+        camera.y = Math.max(0, Math.min(WORLD_H - canvas.height, camera.y));
 
         if (keys[' '] || keys['z'] || shootBtn.active) shoot();
         if (player.shootCooldown > 0) player.shootCooldown--;
@@ -235,6 +238,42 @@
         }
     }
 
+    // World to screen
+    function ws(x, y) {
+        return { x: x - camera.x, y: y - camera.y };
+    }
+
+    function drawFloor() {
+        const startTX = Math.floor(camera.x / TILE_SIZE) - 1;
+        const startTY = Math.floor(camera.y / TILE_SIZE) - 1;
+        const endTX = Math.ceil((camera.x + canvas.width) / TILE_SIZE) + 1;
+        const endTY = Math.ceil((camera.y + canvas.height) / TILE_SIZE) + 1;
+
+        for (let tx = startTX; tx <= endTX; tx++) {
+            for (let ty = startTY; ty <= endTY; ty++) {
+                const sx = Math.floor(tx * TILE_SIZE - camera.x);
+                const sy = Math.floor(ty * TILE_SIZE - camera.y);
+
+                // Consistent per-tile color variation
+                const h = Math.abs((tx * 73856093) ^ (ty * 19349663)) % 1000;
+                const v = 20 + Math.floor(h / 1000 * 16);
+                ctx.fillStyle = `rgb(${v + 3},${v + 1},${v + 6})`;
+                ctx.fillRect(sx, sy, TILE_SIZE, TILE_SIZE);
+
+                // Grout lines
+                ctx.fillStyle = 'rgba(0,0,0,0.4)';
+                ctx.fillRect(sx, sy, TILE_SIZE, 2);
+                ctx.fillRect(sx, sy, 2, TILE_SIZE);
+
+                // Rare highlight tile
+                if (h < 60) {
+                    ctx.fillStyle = 'rgba(255,255,255,0.03)';
+                    ctx.fillRect(sx + 3, sy + 3, TILE_SIZE - 6, TILE_SIZE - 6);
+                }
+            }
+        }
+    }
+
     function drawHeart(x, y, size, filled) {
         ctx.save();
         ctx.translate(x, y);
@@ -248,20 +287,14 @@
     }
 
     function draw() {
-        ctx.fillStyle = '#0a0a1a';
+        ctx.fillStyle = '#0a0a0f';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Grid
-        ctx.strokeStyle = 'rgba(255,255,255,0.04)';
-        ctx.lineWidth = 1;
-        for (let x = 0; x < canvas.width; x += 50) {
-            ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
-        }
-        for (let y = 0; y < canvas.height; y += 50) {
-            ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
-        }
-
         if (state === STATES.START) {
+            camera = { x: 0, y: 0 };
+            drawFloor();
+            ctx.fillStyle = 'rgba(0,0,0,0.65)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.textAlign = 'center';
             ctx.fillStyle = '#4fc3f7';
             ctx.font = 'bold 38px monospace';
@@ -276,10 +309,13 @@
             return;
         }
 
+        drawFloor();
+
         // Bullets
         for (let b of bullets) {
+            const s = ws(b.x, b.y);
             ctx.beginPath();
-            ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+            ctx.arc(s.x, s.y, b.radius, 0, Math.PI * 2);
             ctx.fillStyle = '#ffe066';
             ctx.shadowBlur = 12;
             ctx.shadowColor = '#ffe066';
@@ -289,8 +325,9 @@
 
         // Enemies
         for (let e of enemies) {
+            const s = ws(e.x, e.y);
             ctx.beginPath();
-            ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
+            ctx.arc(s.x, s.y, e.radius, 0, Math.PI * 2);
             ctx.fillStyle = '#ff3333';
             ctx.shadowBlur = 14;
             ctx.shadowColor = '#ff0000';
@@ -298,21 +335,22 @@
             ctx.shadowBlur = 0;
             ctx.fillStyle = '#fff';
             ctx.beginPath();
-            ctx.arc(e.x - 4, e.y - 3, 3, 0, Math.PI * 2);
-            ctx.arc(e.x + 4, e.y - 3, 3, 0, Math.PI * 2);
+            ctx.arc(s.x - 4, s.y - 3, 3, 0, Math.PI * 2);
+            ctx.arc(s.x + 4, s.y - 3, 3, 0, Math.PI * 2);
             ctx.fill();
             ctx.fillStyle = '#000';
             ctx.beginPath();
-            ctx.arc(e.x - 4, e.y - 3, 1.5, 0, Math.PI * 2);
-            ctx.arc(e.x + 4, e.y - 3, 1.5, 0, Math.PI * 2);
+            ctx.arc(s.x - 4, s.y - 3, 1.5, 0, Math.PI * 2);
+            ctx.arc(s.x + 4, s.y - 3, 1.5, 0, Math.PI * 2);
             ctx.fill();
         }
 
         // Player
+        const ps = ws(player.x, player.y);
         const alpha = player.invincible > 0 ? (Math.floor(player.invincible / 5) % 2 === 0 ? 0.3 : 1) : 1;
         ctx.globalAlpha = alpha;
         ctx.save();
-        ctx.translate(player.x, player.y);
+        ctx.translate(ps.x, ps.y);
         ctx.rotate(player.angle);
         ctx.beginPath();
         ctx.arc(0, 0, player.radius, 0, Math.PI * 2);
@@ -338,7 +376,7 @@
         // Joystick
         const jbase = joystick.active
             ? { x: joystick.startX, y: joystick.startY }
-            : getJoystickBase();
+            : { x: 90, y: canvas.height - 90 };
         ctx.beginPath();
         ctx.arc(jbase.x, jbase.y, JOYSTICK_RADIUS, 0, Math.PI * 2);
         ctx.strokeStyle = 'rgba(255,255,255,0.18)';
@@ -365,7 +403,7 @@
         ctx.textAlign = 'center';
         ctx.fillText('FIRE', btn.x, btn.y + 5);
 
-        // Game Over
+        // Game over
         if (state === STATES.DEAD) {
             ctx.fillStyle = 'rgba(0,0,0,0.72)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
