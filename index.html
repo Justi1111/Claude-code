@@ -43,8 +43,8 @@
         <input type="range" id="zoom-slider" min="0.25" max="1.2" step="0.05" value="0.6">
     </div>
     <div class="drow">
-        <div class="dlabel"><span>Fire Rate (lower = faster)</span><span id="fr-val">12</span></div>
-        <input type="range" id="fr-slider" min="2" max="40" step="1" value="12">
+        <div class="dlabel"><span>Fire Rate override (lower = faster)</span><span id="fr-val">off</span></div>
+        <input type="range" id="fr-slider" min="2" max="40" step="1" value="40">
     </div>
     <div class="drow checkbox">
         <input type="checkbox" id="godmode">
@@ -61,7 +61,8 @@ resize();
 window.addEventListener('resize', resize);
 
 // ─── Debug panel ──────────────────────────────────────────────────────────────
-const dbg = { zoom: 0.6, fireRate: 12, godMode: false };
+// fireRateOverride = null means "use player's actual fire rate"
+const dbg = { zoom: 0.6, fireRateOverride: null, godMode: false };
 
 document.getElementById('debug-toggle').addEventListener('click', () => {
     const p = document.getElementById('debug-panel');
@@ -72,8 +73,10 @@ document.getElementById('zoom-slider').addEventListener('input', e => {
     document.getElementById('zoom-val').textContent = dbg.zoom.toFixed(2);
 });
 document.getElementById('fr-slider').addEventListener('input', e => {
-    dbg.fireRate = parseInt(e.target.value);
-    document.getElementById('fr-val').textContent = dbg.fireRate;
+    const v = parseInt(e.target.value);
+    // slider max (40) = off; anything below = override
+    dbg.fireRateOverride = v >= 40 ? null : v;
+    document.getElementById('fr-val').textContent = v >= 40 ? 'off' : v;
 });
 document.getElementById('godmode').addEventListener('change', e => {
     dbg.godMode = e.target.checked;
@@ -85,23 +88,38 @@ const WORLD_H   = 4000;
 const TILE_SIZE = 64;
 const STATES    = { START: 'start', PLAYING: 'playing', LEVELUP: 'levelup', DEAD: 'dead' };
 
+// ─── Upgrades ─────────────────────────────────────────────────────────────────
 const UPGRADE_POOL = [
-    { name: 'Test Upgrade A', desc: 'A mysterious power\nawaits... (coming soon)' },
-    { name: 'Test Upgrade B', desc: 'Something cool\nwill go here' },
-    { name: 'Test Upgrade C', desc: 'Placeholder upgrade,\nstay tuned' },
-    { name: 'Test Upgrade D', desc: 'An ancient rune\nof unknown power' },
-    { name: 'Test Upgrade E', desc: 'Work in progress...' },
-    { name: 'Test Upgrade F', desc: 'Details TBD' },
+    { id: 'firerate',   name: '+20% Fire Rate', desc: 'Shoot 20% faster' },
+    { id: 'multishot',  name: '+1 Projectile',  desc: 'Fire an extra bullet\nwith each shot' },
+    { id: 'heal',       name: 'Heal 1 Heart',   desc: 'Restore one lost heart' },
+    { id: 'darkheart',  name: 'Dark Heart',     desc: 'Gain an extra life.\nCannot be healed.' },
 ];
-
-// ─── Utility ──────────────────────────────────────────────────────────────────
-const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
 function pickUpgrades(n) {
     return [...UPGRADE_POOL].sort(() => Math.random() - 0.5).slice(0, n);
 }
 
-// card positions for the level-up upgrade screen
+function applyUpgrade(upg) {
+    switch (upg.id) {
+        case 'firerate':
+            player.fireRate = Math.max(2, Math.floor(player.fireRate * 0.8));
+            break;
+        case 'multishot':
+            player.projectiles++;
+            break;
+        case 'heal':
+            lives = Math.min(lives + 1, player.maxHearts);
+            break;
+        case 'darkheart':
+            player.darkHearts++;
+            break;
+    }
+}
+
+// ─── Utility ──────────────────────────────────────────────────────────────────
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
 function cardRects() {
     const cw = Math.min(300, canvas.width - 48);
     const ch = 120, gap = 14;
@@ -116,12 +134,19 @@ function cardRects() {
 // ─── Game state ───────────────────────────────────────────────────────────────
 let state = STATES.START;
 let player, bullets, enemies, score, lives, spawnTimer, spawnInterval;
-let camera = { x: 0, y: 0 };   // initialized here so drawFloor works before initGame()
+let camera = { x: 0, y: 0 };
 let xp, level, xpToNext, upgradeChoices;
 
 function initGame() {
-    player = { x: WORLD_W / 2, y: WORLD_H / 2, radius: 18, speed: 4,
-               angle: 0, shootCooldown: 0, invincible: 0 };
+    player = {
+        x: WORLD_W / 2, y: WORLD_H / 2,
+        radius: 18, speed: 4, angle: 0,
+        shootCooldown: 0, invincible: 0,
+        fireRate: 12,       // frames between shots (lower = faster)
+        projectiles: 1,     // bullets per shot
+        maxHearts: 3,       // max healable hearts
+        darkHearts: 0,      // extra hearts that can't be healed
+    };
     bullets = []; enemies = [];
     score = 0; lives = 3;
     spawnTimer = 0; spawnInterval = 120;
@@ -198,8 +223,10 @@ window.addEventListener('keyup', e => { keys[e.key] = false; });
 // ─── Upgrade selection ────────────────────────────────────────────────────────
 function handleUpgradeTap(cx, cy) {
     const cards = cardRects();
-    for (const c of cards) {
+    for (let i = 0; i < cards.length; i++) {
+        const c = cards[i];
         if (cx >= c.x && cx <= c.x + c.w && cy >= c.y && cy <= c.y + c.h) {
+            applyUpgrade(upgradeChoices[i]);
             xp = Math.max(0, xp - xpToNext);
             level++;
             xpToNext = Math.floor(xpToNext * 1.45);
@@ -209,7 +236,7 @@ function handleUpgradeTap(cx, cy) {
     }
 }
 
-// ─── Spawn / shoot helpers ────────────────────────────────────────────────────
+// ─── Spawn / shoot ────────────────────────────────────────────────────────────
 function spawnEnemy() {
     const ang  = Math.random() * Math.PI * 2;
     const dist = Math.max(canvas.width, canvas.height) / dbg.zoom * 0.6;
@@ -222,14 +249,20 @@ function spawnEnemy() {
 
 function shoot() {
     if (player.shootCooldown > 0) return;
-    player.shootCooldown = dbg.fireRate;
-    const cos = Math.cos(player.angle), sin = Math.sin(player.angle);
-    bullets.push({
-        x: player.x + cos * player.radius,
-        y: player.y + sin * player.radius,
-        dx: cos * 10, dy: sin * 10,
-        radius: 5, life: 120,
-    });
+    player.shootCooldown = dbg.fireRateOverride ?? player.fireRate;
+
+    // spread bullets evenly around aim angle (15° between each)
+    const spreadStep = 15 * Math.PI / 180;
+    const halfSpread = (player.projectiles - 1) / 2 * spreadStep;
+    for (let i = 0; i < player.projectiles; i++) {
+        const ang = player.angle - halfSpread + i * spreadStep;
+        bullets.push({
+            x: player.x + Math.cos(player.angle) * player.radius,
+            y: player.y + Math.sin(player.angle) * player.radius,
+            dx: Math.cos(ang) * 10, dy: Math.sin(ang) * 10,
+            radius: 5, life: 120,
+        });
+    }
 }
 
 // ─── Update ───────────────────────────────────────────────────────────────────
@@ -306,13 +339,18 @@ function update() {
     enemies = enemies.filter(e => !dead.has(e));
 
     // Player ↔ enemy collision
+    // Dark hearts are lost first (they're a buffer); when gone, normal lives are lost
     if (!dbg.godMode && player.invincible === 0) {
         for (const e of enemies) {
             if (Math.hypot(player.x - e.x, player.y - e.y) >= player.radius + e.radius - 4) continue;
-            lives--;
+            if (player.darkHearts > 0) {
+                player.darkHearts--;            // dark heart lost — slot disappears permanently
+            } else {
+                lives--;
+            }
             player.invincible = 90;
             enemies = enemies.filter(en => en !== e);
-            if (lives <= 0) state = STATES.DEAD;
+            if (lives <= 0 && player.darkHearts <= 0) state = STATES.DEAD;
             break;
         }
     }
@@ -343,13 +381,14 @@ function drawFloor() {
     }
 }
 
-function drawHeart(x, y, sz, filled) {
+// color: filled red, empty dark gray, dark heart purple
+function drawHeart(x, y, sz, color) {
     ctx.save(); ctx.translate(x, y);
     ctx.beginPath();
     ctx.moveTo(0, sz * 0.3);
     ctx.bezierCurveTo(-sz * 0.5, -sz * 0.3, -sz, sz * 0.1, 0, sz);
     ctx.bezierCurveTo( sz, sz * 0.1,  sz * 0.5, -sz * 0.3, 0, sz * 0.3);
-    ctx.fillStyle = filled ? '#ff4444' : '#2a2a2a';
+    ctx.fillStyle = color;
     ctx.fill(); ctx.restore();
 }
 
@@ -363,7 +402,6 @@ function roundRect(x, y, w, h, r) {
     ctx.closePath();
 }
 
-// dim the whole screen for overlays
 function dimScreen(alpha = 0.72) {
     ctx.fillStyle = `rgba(0,0,0,${alpha})`;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -424,8 +462,17 @@ function drawHUD() {
         ctx.fillText('GOD MODE', 14, 50);
     }
 
-    // Lives
-    for (let i = 0; i < 3; i++) drawHeart(canvas.width - 120 - i * 32, 16, 9, i < lives);
+    // Hearts — normal slots (always shown), then dark hearts (no empty slot)
+    const totalSlots = player.maxHearts + player.darkHearts;
+    for (let i = 0; i < totalSlots; i++) {
+        const x = canvas.width - 120 - i * 32;
+        const isDark   = i >= player.maxHearts;              // dark heart slot
+        const isFilled = isDark ? true : i < lives;          // dark hearts always "filled"
+        const color = isDark      ? '#8844dd'                // purple = dark heart
+                    : isFilled    ? '#ff4444'                // red    = normal heart
+                                  : '#2a2a2a';               // gray   = empty slot
+        drawHeart(x, 16, 9, color);
+    }
 
     // XP bar
     const bw = Math.min(280, canvas.width * 0.55), bh = 13;
