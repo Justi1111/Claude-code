@@ -1,1 +1,524 @@
-{FILE_CONTENT}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Top-Down Shooter</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #000; overflow: hidden; touch-action: none; font-family: monospace; }
+        canvas { display: block; }
+
+        #debug-toggle {
+            position: fixed; top: 10px; right: 10px;
+            background: rgba(60,60,80,0.9); color: #aaa;
+            border: 1px solid #555; padding: 5px 10px;
+            font-family: monospace; font-size: 12px;
+            cursor: pointer; z-index: 200; border-radius: 4px;
+            user-select: none;
+        }
+        #debug-toggle:active { background: rgba(90,90,110,0.9); }
+
+        #debug-panel {
+            display: none;
+            position: fixed; top: 42px; right: 10px;
+            background: rgba(8,8,20,0.96); color: #ccc;
+            padding: 14px; border: 1px solid #444;
+            z-index: 199; min-width: 240px; border-radius: 6px;
+        }
+        #debug-panel h3 { color: #4fc3f7; margin-bottom: 12px; font-size: 13px; letter-spacing: 1px; }
+        .drow { margin-bottom: 12px; }
+        .drow .dlabel {
+            display: flex; justify-content: space-between;
+            font-size: 12px; color: #aaa; margin-bottom: 3px;
+        }
+        .drow input[type=range] { width: 100%; cursor: pointer; accent-color: #4fc3f7; }
+        .drow.checkbox { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+        .drow.checkbox input { width: 15px; height: 15px; cursor: pointer; accent-color: #ffd700; }
+    </style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+<button id="debug-toggle">DEBUG</button>
+<div id="debug-panel">
+    <h3>&#9881; DEBUG PANEL</h3>
+    <div class="drow">
+        <div class="dlabel"><span>Zoom (Field of View)</span><span id="zoom-val">0.6</span></div>
+        <input type="range" id="zoom-slider" min="0.25" max="1.2" step="0.05" value="0.6">
+    </div>
+    <div class="drow">
+        <div class="dlabel"><span>Fire Rate (lower = faster)</span><span id="fr-val">12</span></div>
+        <input type="range" id="fr-slider" min="2" max="40" step="1" value="12">
+    </div>
+    <div class="drow checkbox">
+        <input type="checkbox" id="godmode">
+        <label for="godmode">God Mode (Invincible)</label>
+    </div>
+</div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+resize();
+window.addEventListener('resize', resize);
+
+// Debug
+const dbg = { zoom: 0.6, fireRate: 12, godMode: false };
+
+document.getElementById('debug-toggle').addEventListener('click', () => {
+    const p = document.getElementById('debug-panel');
+    p.style.display = p.style.display === 'none' ? 'block' : 'none';
+});
+document.getElementById('zoom-slider').addEventListener('input', e => {
+    dbg.zoom = parseFloat(e.target.value);
+    document.getElementById('zoom-val').textContent = dbg.zoom.toFixed(2);
+});
+document.getElementById('fr-slider').addEventListener('input', e => {
+    dbg.fireRate = parseInt(e.target.value);
+    document.getElementById('fr-val').textContent = dbg.fireRate;
+});
+document.getElementById('godmode').addEventListener('change', e => {
+    dbg.godMode = e.target.checked;
+});
+
+// Constants
+const WORLD_W = 4000, WORLD_H = 4000, TILE_SIZE = 64;
+const STATES = { START: 'start', PLAYING: 'playing', LEVELUP: 'levelup', DEAD: 'dead' };
+
+// Upgrades pool
+const UPGRADE_POOL = [
+    { name: 'Test Upgrade A', desc: 'A mysterious power\nawaits... (coming soon)' },
+    { name: 'Test Upgrade B', desc: 'Something cool\nwill go here' },
+    { name: 'Test Upgrade C', desc: 'Placeholder upgrade,\nstay tuned' },
+    { name: 'Test Upgrade D', desc: 'An ancient rune\nof unknown power' },
+    { name: 'Test Upgrade E', desc: 'Work in progress...' },
+    { name: 'Test Upgrade F', desc: 'Details TBD' },
+];
+
+function pickUpgrades(n) {
+    return [...UPGRADE_POOL].sort(() => Math.random() - 0.5).slice(0, n);
+}
+
+// State — camera initialized here so drawFloor works before initGame()
+let state = STATES.START;
+let player, bullets, enemies, score, lives, spawnTimer, spawnInterval;
+let camera = { x: 0, y: 0 };
+let xp, level, xpToNext, upgradeChoices;
+
+function initGame() {
+    player = {
+        x: WORLD_W / 2, y: WORLD_H / 2,
+        radius: 18, speed: 4, angle: 0,
+        shootCooldown: 0, invincible: 0
+    };
+    camera = { x: 0, y: 0 };
+    bullets = []; enemies = [];
+    score = 0; lives = 3;
+    spawnTimer = 0; spawnInterval = 120;
+    xp = 0; level = 1; xpToNext = 60;
+    upgradeChoices = [];
+    state = STATES.PLAYING;
+    updateCamera();
+}
+
+function updateCamera() {
+    const vw = canvas.width / dbg.zoom, vh = canvas.height / dbg.zoom;
+    camera.x = Math.max(0, Math.min(WORLD_W - vw, player.x - vw / 2));
+    camera.y = Math.max(0, Math.min(WORLD_H - vh, player.y - vh / 2));
+}
+
+// Touch controls
+const JOY_R = 60, FIRE_R = 45;
+let joy = { active: false, id: null, sx: 0, sy: 0, dx: 0, dy: 0 };
+let fireBtn = { active: false, id: null };
+
+function fireBtnPos() { return { x: canvas.width - 90, y: canvas.height - 90 }; }
+
+canvas.addEventListener('touchstart', e => {
+    e.preventDefault();
+    if (state === STATES.START || state === STATES.DEAD) { initGame(); return; }
+    if (state === STATES.LEVELUP) {
+        handleUpgradeTap(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+        return;
+    }
+    for (const t of e.changedTouches) {
+        const b = fireBtnPos();
+        if (Math.hypot(t.clientX - b.x, t.clientY - b.y) < FIRE_R + 30) {
+            fireBtn.active = true; fireBtn.id = t.identifier;
+        } else if (!joy.active) {
+            joy.active = true; joy.id = t.identifier;
+            joy.sx = t.clientX; joy.sy = t.clientY; joy.dx = 0; joy.dy = 0;
+        }
+    }
+}, { passive: false });
+
+canvas.addEventListener('touchmove', e => {
+    e.preventDefault();
+    for (const t of e.changedTouches) {
+        if (t.identifier === joy.id) {
+            joy.dx = t.clientX - joy.sx;
+            joy.dy = t.clientY - joy.sy;
+            const len = Math.hypot(joy.dx, joy.dy);
+            if (len > JOY_R) { joy.dx = joy.dx / len * JOY_R; joy.dy = joy.dy / len * JOY_R; }
+        }
+    }
+}, { passive: false });
+
+canvas.addEventListener('touchend', e => {
+    e.preventDefault();
+    for (const t of e.changedTouches) {
+        if (t.identifier === joy.id) { joy.active = false; joy.dx = 0; joy.dy = 0; }
+        if (t.identifier === fireBtn.id) { fireBtn.active = false; }
+    }
+}, { passive: false });
+
+canvas.addEventListener('click', e => {
+    if (state === STATES.START || state === STATES.DEAD) { initGame(); return; }
+    if (state === STATES.LEVELUP) handleUpgradeTap(e.clientX, e.clientY);
+});
+
+const keys = {};
+window.addEventListener('keydown', e => {
+    keys[e.key] = true;
+    if (e.key === 'Enter' && (state === STATES.START || state === STATES.DEAD)) initGame();
+});
+window.addEventListener('keyup', e => { keys[e.key] = false; });
+
+// Level up card layout
+function cardRects() {
+    const cw = Math.min(300, canvas.width - 48);
+    const ch = 120;
+    const gap = 14;
+    const x = (canvas.width - cw) / 2;
+    const y0 = canvas.height / 2 - ch - gap / 2;
+    return [
+        { x, y: y0,            w: cw, h: ch },
+        { x, y: y0 + ch + gap, w: cw, h: ch },
+    ];
+}
+
+function handleUpgradeTap(cx, cy) {
+    for (let i = 0; i < cardRects().length; i++) {
+        const c = cardRects()[i];
+        if (cx >= c.x && cx <= c.x + c.w && cy >= c.y && cy <= c.y + c.h) {
+            xp = Math.max(0, xp - xpToNext);
+            level++;
+            xpToNext = Math.floor(xpToNext * 1.45);
+            state = STATES.PLAYING;
+            break;
+        }
+    }
+}
+
+// Helpers
+function isInView(ex, ey) {
+    const vw = canvas.width / dbg.zoom, vh = canvas.height / dbg.zoom;
+    const margin = 30;
+    return ex > camera.x - margin && ex < camera.x + vw + margin &&
+           ey > camera.y - margin && ey < camera.y + vh + margin;
+}
+
+function shoot() {
+    if (player.shootCooldown > 0) return;
+    player.shootCooldown = dbg.fireRate;
+    const ang = player.angle;
+    bullets.push({
+        x: player.x + Math.cos(ang) * player.radius,
+        y: player.y + Math.sin(ang) * player.radius,
+        dx: Math.cos(ang) * 10, dy: Math.sin(ang) * 10,
+        radius: 5, life: 120
+    });
+}
+
+function spawnEnemy() {
+    const ang = Math.random() * Math.PI * 2;
+    const dist = Math.max(canvas.width, canvas.height) / dbg.zoom * 0.6;
+    enemies.push({
+        x: Math.max(20, Math.min(WORLD_W - 20, player.x + Math.cos(ang) * dist)),
+        y: Math.max(20, Math.min(WORLD_H - 20, player.y + Math.sin(ang) * dist)),
+        radius: 14, speed: 1.2 + Math.random() * 1.8, hp: 1, xpVal: 10
+    });
+}
+
+// Update
+function update() {
+    if (state !== STATES.PLAYING) return;
+
+    let mx = 0, my = 0;
+    if (keys['ArrowUp']   || keys['w']) my -= 1;
+    if (keys['ArrowDown'] || keys['s']) my += 1;
+    if (keys['ArrowLeft'] || keys['a']) mx -= 1;
+    if (keys['ArrowRight']|| keys['d']) mx += 1;
+    if (joy.active || joy.dx || joy.dy) { mx = joy.dx / JOY_R; my = joy.dy / JOY_R; }
+    const mlen = Math.hypot(mx, my);
+    if (mlen > 0) { player.x += mx / mlen * player.speed; player.y += my / mlen * player.speed; }
+    player.x = Math.max(player.radius, Math.min(WORLD_W - player.radius, player.x));
+    player.y = Math.max(player.radius, Math.min(WORLD_H - player.radius, player.y));
+
+    updateCamera();
+
+    // Auto-aim: only enemies visible on screen
+    const visible = enemies.filter(e => isInView(e.x, e.y));
+    if (visible.length > 0) {
+        let best = null, bd = Infinity;
+        for (const e of visible) {
+            const d = Math.hypot(e.x - player.x, e.y - player.y);
+            if (d < bd) { bd = d; best = e; }
+        }
+        if (best) player.angle = Math.atan2(best.y - player.y, best.x - player.x);
+    }
+
+    if (keys[' '] || keys['z'] || fireBtn.active) shoot();
+    if (player.shootCooldown > 0) player.shootCooldown--;
+    if (player.invincible > 0) player.invincible--;
+
+    bullets = bullets.filter(b => b.life > 0);
+    for (const b of bullets) { b.x += b.dx; b.y += b.dy; b.life--; }
+
+    spawnTimer++;
+    if (spawnTimer >= spawnInterval) {
+        spawnTimer = 0;
+        spawnEnemy();
+        if (score > 5)  spawnEnemy();
+        if (score > 15) spawnEnemy();
+        if (spawnInterval > 40) spawnInterval--;
+    }
+
+    for (const e of enemies) {
+        const dx = player.x - e.x, dy = player.y - e.y;
+        const len = Math.hypot(dx, dy);
+        e.x += dx / len * e.speed;
+        e.y += dy / len * e.speed;
+    }
+
+    const dead = new Set();
+    for (const b of bullets) {
+        for (const e of enemies) {
+            if (!dead.has(e) && Math.hypot(b.x - e.x, b.y - e.y) < b.radius + e.radius) {
+                b.life = 0;
+                e.hp--;
+                if (e.hp <= 0) {
+                    dead.add(e);
+                    score++;
+                    xp += e.xpVal;
+                    if (xp >= xpToNext) {
+                        upgradeChoices = pickUpgrades(2);
+                        state = STATES.LEVELUP;
+                    }
+                }
+            }
+        }
+    }
+    enemies = enemies.filter(e => !dead.has(e));
+
+    if (!dbg.godMode && player.invincible === 0) {
+        for (const e of enemies) {
+            if (Math.hypot(player.x - e.x, player.y - e.y) < player.radius + e.radius - 4) {
+                lives--;
+                player.invincible = 90;
+                enemies = enemies.filter(en => en !== e);
+                if (lives <= 0) state = STATES.DEAD;
+                break;
+            }
+        }
+    }
+}
+
+// Draw helpers
+function drawFloor() {
+    const vw = canvas.width / dbg.zoom, vh = canvas.height / dbg.zoom;
+    const x0 = Math.floor(camera.x / TILE_SIZE) - 1;
+    const y0 = Math.floor(camera.y / TILE_SIZE) - 1;
+    const x1 = Math.ceil((camera.x + vw) / TILE_SIZE) + 1;
+    const y1 = Math.ceil((camera.y + vh) / TILE_SIZE) + 1;
+    for (let tx = x0; tx <= x1; tx++) {
+        for (let ty = y0; ty <= y1; ty++) {
+            const wx = tx * TILE_SIZE, wy = ty * TILE_SIZE;
+            const h = Math.abs((tx * 73856093) ^ (ty * 19349663)) % 1000;
+            const v = 20 + Math.floor(h / 1000 * 16);
+            ctx.fillStyle = 'rgb(' + (v+3) + ',' + (v+1) + ',' + (v+6) + ')';
+            ctx.fillRect(wx, wy, TILE_SIZE, TILE_SIZE);
+            ctx.fillStyle = 'rgba(0,0,0,0.38)';
+            ctx.fillRect(wx, wy, TILE_SIZE, 2);
+            ctx.fillRect(wx, wy, 2, TILE_SIZE);
+            if (h < 60) {
+                ctx.fillStyle = 'rgba(255,255,255,0.03)';
+                ctx.fillRect(wx + 3, wy + 3, TILE_SIZE - 6, TILE_SIZE - 6);
+            }
+        }
+    }
+}
+
+function drawHeart(x, y, sz, filled) {
+    ctx.save(); ctx.translate(x, y);
+    ctx.beginPath();
+    ctx.moveTo(0, sz * 0.3);
+    ctx.bezierCurveTo(-sz * 0.5, -sz * 0.3, -sz, sz * 0.1, 0, sz);
+    ctx.bezierCurveTo(sz, sz * 0.1, sz * 0.5, -sz * 0.3, 0, sz * 0.3);
+    ctx.fillStyle = filled ? '#ff4444' : '#2a2a2a';
+    ctx.fill(); ctx.restore();
+}
+
+function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+}
+
+// Draw
+function draw() {
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    if (state === STATES.START) {
+        ctx.save();
+        ctx.scale(dbg.zoom, dbg.zoom);
+        drawFloor();
+        ctx.restore();
+        ctx.fillStyle = 'rgba(0,0,0,0.68)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#4fc3f7'; ctx.font = 'bold 34px monospace';
+        ctx.fillText('TOP-DOWN SHOOTER', canvas.width / 2, canvas.height / 2 - 50);
+        ctx.fillStyle = '#aaa'; ctx.font = '19px monospace';
+        ctx.fillText('Tap to start', canvas.width / 2, canvas.height / 2 + 8);
+        ctx.fillStyle = '#555'; ctx.font = '14px monospace';
+        ctx.fillText('Move: WASD / joystick   Shoot: SPACE / FIRE', canvas.width / 2, canvas.height / 2 + 48);
+        return;
+    }
+
+    // World (zoomed)
+    ctx.save();
+    ctx.scale(dbg.zoom, dbg.zoom);
+    ctx.translate(-camera.x, -camera.y);
+
+    drawFloor();
+
+    for (const b of bullets) {
+        ctx.beginPath(); ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffe066'; ctx.shadowBlur = 10; ctx.shadowColor = '#ffe066';
+        ctx.fill(); ctx.shadowBlur = 0;
+    }
+
+    for (const e of enemies) {
+        ctx.beginPath(); ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
+        ctx.fillStyle = '#ff3333'; ctx.shadowBlur = 12; ctx.shadowColor = '#f00';
+        ctx.fill(); ctx.shadowBlur = 0;
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(e.x - 4, e.y - 3, 3, 0, Math.PI * 2);
+        ctx.arc(e.x + 4, e.y - 3, 3, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#000';
+        ctx.beginPath(); ctx.arc(e.x - 4, e.y - 3, 1.5, 0, Math.PI * 2);
+        ctx.arc(e.x + 4, e.y - 3, 1.5, 0, Math.PI * 2); ctx.fill();
+    }
+
+    const blink = player.invincible > 0 && !dbg.godMode && Math.floor(player.invincible / 5) % 2 === 0;
+    ctx.globalAlpha = blink ? 0.3 : 1;
+    ctx.save();
+    ctx.translate(player.x, player.y); ctx.rotate(player.angle);
+    ctx.beginPath(); ctx.arc(0, 0, player.radius, 0, Math.PI * 2);
+    ctx.fillStyle = dbg.godMode ? '#ffd700' : '#4fc3f7';
+    ctx.shadowBlur = 16; ctx.shadowColor = dbg.godMode ? '#ffd700' : '#4fc3f7';
+    ctx.fill(); ctx.shadowBlur = 0;
+    ctx.fillStyle = dbg.godMode ? '#ffe066' : '#81d4fa';
+    ctx.fillRect(2, -5, player.radius + 6, 10);
+    ctx.restore();
+    ctx.globalAlpha = 1;
+
+    ctx.restore(); // end world transform
+
+    // HUD
+    ctx.fillStyle = '#fff'; ctx.textAlign = 'left';
+    ctx.font = 'bold 20px monospace';
+    ctx.fillText('SCORE: ' + score, 14, 32);
+    if (dbg.godMode) {
+        ctx.fillStyle = '#ffd700'; ctx.font = 'bold 12px monospace';
+        ctx.fillText('GOD MODE', 14, 50);
+    }
+    for (let i = 0; i < 3; i++) drawHeart(canvas.width - 120 - i * 32, 16, 9, i < lives);
+
+    // XP bar
+    const barW = Math.min(280, canvas.width * 0.55);
+    const barH = 13;
+    const bx = (canvas.width - barW) / 2, by = canvas.height - 28;
+    const prog = Math.min(xp / xpToNext, 1);
+    ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(bx - 1, by - 1, barW + 2, barH + 2);
+    ctx.fillStyle = '#111'; ctx.fillRect(bx, by, barW, barH);
+    const grad = ctx.createLinearGradient(bx, 0, bx + barW, 0);
+    grad.addColorStop(0, '#7b2fff'); grad.addColorStop(1, '#c084fc');
+    ctx.fillStyle = grad; ctx.fillRect(bx, by, barW * prog, barH);
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 1;
+    ctx.strokeRect(bx, by, barW, barH);
+    ctx.fillStyle = '#bbb'; ctx.font = '11px monospace'; ctx.textAlign = 'center';
+    ctx.fillText('LVL ' + level + '  ' + xp + ' / ' + xpToNext + ' XP', canvas.width / 2, by - 4);
+
+    // Joystick
+    const jb = joy.active ? { x: joy.sx, y: joy.sy } : { x: 80, y: canvas.height - 80 };
+    ctx.beginPath(); ctx.arc(jb.x, jb.y, JOY_R, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.04)'; ctx.fill();
+    ctx.beginPath(); ctx.arc(jb.x + joy.dx, jb.y + joy.dy, 24, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.fill();
+
+    // Fire button
+    const fb = fireBtnPos();
+    ctx.beginPath(); ctx.arc(fb.x, fb.y, FIRE_R, 0, Math.PI * 2);
+    ctx.fillStyle = fireBtn.active ? 'rgba(255,200,0,0.5)' : 'rgba(255,200,0,0.15)'; ctx.fill();
+    ctx.strokeStyle = 'rgba(255,200,0,0.65)'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = '#ffe066'; ctx.font = 'bold 14px monospace'; ctx.textAlign = 'center';
+    ctx.fillText('FIRE', fb.x, fb.y + 5);
+
+    // Level up overlay
+    if (state === STATES.LEVELUP) {
+        ctx.fillStyle = 'rgba(0,0,0,0.72)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#c084fc'; ctx.font = 'bold 30px monospace';
+        ctx.fillText('LEVEL UP!', canvas.width / 2, canvas.height / 2 - 145);
+        ctx.fillStyle = '#888'; ctx.font = '15px monospace';
+        ctx.fillText('Tap to choose an upgrade', canvas.width / 2, canvas.height / 2 - 115);
+        const cards = cardRects();
+        upgradeChoices.forEach((upg, i) => {
+            const c = cards[i];
+            roundRect(c.x, c.y, c.w, c.h, 10);
+            ctx.fillStyle = 'rgba(25,15,45,0.97)'; ctx.fill();
+            ctx.strokeStyle = '#7b2fff'; ctx.lineWidth = 2; ctx.stroke();
+            ctx.fillStyle = '#ddb8ff'; ctx.font = 'bold 15px monospace'; ctx.textAlign = 'center';
+            ctx.fillText(upg.name, c.x + c.w / 2, c.y + 38);
+            ctx.fillStyle = '#888'; ctx.font = '12px monospace';
+            upg.desc.split('\n').forEach((line, li) =>
+                ctx.fillText(line, c.x + c.w / 2, c.y + 66 + li * 18)
+            );
+        });
+    }
+
+    // Game over
+    if (state === STATES.DEAD) {
+        ctx.fillStyle = 'rgba(0,0,0,0.75)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#ff4444'; ctx.font = 'bold 44px monospace';
+        ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 48);
+        ctx.fillStyle = '#fff'; ctx.font = '26px monospace';
+        ctx.fillText('Score: ' + score, canvas.width / 2, canvas.height / 2 + 8);
+        ctx.fillStyle = '#aaa'; ctx.font = '18px monospace';
+        ctx.fillText('Reached level ' + level, canvas.width / 2, canvas.height / 2 + 38);
+        ctx.fillText('Tap to restart', canvas.width / 2, canvas.height / 2 + 68);
+    }
+}
+
+function loop() { update(); draw(); requestAnimationFrame(loop); }
+loop();
+</script>
+</body>
+</html>
