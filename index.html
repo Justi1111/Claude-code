@@ -44,7 +44,7 @@
     </div>
     <div class="drow">
         <div class="dlabel"><span>Fire Rate override (lower = faster)</span><span id="fr-val">off</span></div>
-        <input type="range" id="fr-slider" min="2" max="40" step="1" value="40">
+        <input type="range" id="fr-slider" min="2" max="49" step="1" value="49">
     </div>
     <div class="drow checkbox">
         <input type="checkbox" id="godmode">
@@ -53,7 +53,7 @@
 </div>
 
 <script>
-// ─── Canvas setup ─────────────────────────────────────────────────────────────
+// ─── Canvas ───────────────────────────────────────────────────────────────────
 const canvas = document.getElementById('gameCanvas');
 const ctx    = canvas.getContext('2d');
 function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
@@ -61,12 +61,14 @@ resize();
 window.addEventListener('resize', resize);
 
 // ─── Debug panel ──────────────────────────────────────────────────────────────
-// fireRateOverride = null means "use player's actual fire rate"
 const dbg = { zoom: 0.6, fireRateOverride: null, godMode: false };
+let paused = false;
 
+const debugPanel = document.getElementById('debug-panel');
 document.getElementById('debug-toggle').addEventListener('click', () => {
-    const p = document.getElementById('debug-panel');
-    p.style.display = p.style.display === 'none' ? 'block' : 'none';
+    const opening = debugPanel.style.display === 'none';
+    debugPanel.style.display = opening ? 'block' : 'none';
+    if (state === STATES.PLAYING) paused = opening;
 });
 document.getElementById('zoom-slider').addEventListener('input', e => {
     dbg.zoom = parseFloat(e.target.value);
@@ -74,13 +76,10 @@ document.getElementById('zoom-slider').addEventListener('input', e => {
 });
 document.getElementById('fr-slider').addEventListener('input', e => {
     const v = parseInt(e.target.value);
-    // slider max (40) = off; anything below = override
-    dbg.fireRateOverride = v >= 40 ? null : v;
-    document.getElementById('fr-val').textContent = v >= 40 ? 'off' : v;
+    dbg.fireRateOverride = v >= 49 ? null : v;
+    document.getElementById('fr-val').textContent = v >= 49 ? 'off' : v;
 });
-document.getElementById('godmode').addEventListener('change', e => {
-    dbg.godMode = e.target.checked;
-});
+document.getElementById('godmode').addEventListener('change', e => { dbg.godMode = e.target.checked; });
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const WORLD_W   = 4000;
@@ -88,12 +87,20 @@ const WORLD_H   = 4000;
 const TILE_SIZE = 64;
 const STATES    = { START: 'start', PLAYING: 'playing', LEVELUP: 'levelup', DEAD: 'dead' };
 
+const SHIELD_ORBIT_R      = 50;   // px from player center
+const SHIELD_R            = 8;    // shield object radius
+const SHIELD_SPEED        = Math.PI / 70; // radians per frame
+const SHIELD_DAMAGE       = 0.25; // per hit (enemy hp is float)
+const SHIELD_HIT_COOLDOWN = 30;   // frames between damage ticks
+
 // ─── Upgrades ─────────────────────────────────────────────────────────────────
 const UPGRADE_POOL = [
-    { id: 'firerate',   name: '+20% Fire Rate', desc: 'Shoot 20% faster' },
-    { id: 'multishot',  name: '+1 Projectile',  desc: 'Fire an extra bullet\nwith each shot' },
-    { id: 'heal',       name: 'Heal 1 Heart',   desc: 'Restore one lost heart' },
-    { id: 'darkheart',  name: 'Dark Heart',     desc: 'Gain an extra life.\nCannot be healed.' },
+    { id: 'firerate',     name: '+20% Fire Rate',  desc: 'Shoot 20% faster' },
+    { id: 'multishot',    name: '+1 Projectile',   desc: 'Fire an extra bullet\nwith each shot' },
+    { id: 'heal',         name: 'Heal 1 Heart',    desc: 'Restore one lost heart' },
+    { id: 'darkheart',    name: 'Dark Heart',      desc: 'Gain an extra life.\nCannot be healed.' },
+    { id: 'shield',       name: 'Shield',          desc: 'Orbiting shield that\ndamages and pushes enemies' },
+    { id: 'penetration',  name: 'Penetration',     desc: 'Bullets pierce through\none extra enemy' },
 ];
 
 function pickUpgrades(n) {
@@ -102,23 +109,28 @@ function pickUpgrades(n) {
 
 function applyUpgrade(upg) {
     switch (upg.id) {
-        case 'firerate':
-            player.fireRate = Math.max(2, Math.floor(player.fireRate * 0.8));
-            break;
-        case 'multishot':
-            player.projectiles++;
-            break;
-        case 'heal':
-            lives = Math.min(lives + 1, player.maxHearts);
-            break;
-        case 'darkheart':
-            player.darkHearts++;
-            break;
+        case 'firerate':    player.fireRate    = Math.max(2, Math.floor(player.fireRate * 0.8)); break;
+        case 'multishot':   player.projectiles++;  break;
+        case 'heal':        lives = Math.min(lives + 1, player.maxHearts); break;
+        case 'darkheart':   player.darkHearts++;   break;
+        case 'shield':      player.shields++;      break;
+        case 'penetration': player.pierceCount++;  break;
     }
 }
 
 // ─── Utility ──────────────────────────────────────────────────────────────────
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+// Offsets for multi-shot: always one bullet at 0°, extras alternate ±
+function bulletOffsets(n) {
+    const S = 15 * Math.PI / 180;
+    const offsets = [0];
+    for (let i = 1; offsets.length < n; i++) {
+        offsets.push(i * S);
+        if (offsets.length < n) offsets.push(-i * S);
+    }
+    return offsets;
+}
 
 function cardRects() {
     const cw = Math.min(300, canvas.width - 48);
@@ -142,16 +154,20 @@ function initGame() {
         x: WORLD_W / 2, y: WORLD_H / 2,
         radius: 18, speed: 4, angle: 0,
         shootCooldown: 0, invincible: 0,
-        fireRate: 12,       // frames between shots (lower = faster)
-        projectiles: 1,     // bullets per shot
-        maxHearts: 3,       // max healable hearts
-        darkHearts: 0,      // extra hearts that can't be healed
+        fireRate:    48,   // frames between shots (was 12, now 4× slower)
+        projectiles: 1,
+        pierceCount: 0,    // extra enemies a bullet passes through
+        maxHearts:   3,
+        darkHearts:  0,
+        shields:     0,
+        shieldAngle: 0,
     };
     bullets = []; enemies = [];
     score = 0; lives = 3;
     spawnTimer = 0; spawnInterval = 120;
     xp = 0; level = 1; xpToNext = 60;
     upgradeChoices = [];
+    paused = false;
     state = STATES.PLAYING;
     updateCamera();
 }
@@ -163,7 +179,7 @@ function updateCamera() {
     camera.y = clamp(player.y - vh / 2, 0, WORLD_H - vh);
 }
 
-// ─── Touch controls ───────────────────────────────────────────────────────────
+// ─── Input ────────────────────────────────────────────────────────────────────
 const JOY_R  = 60;
 const FIRE_R = 45;
 const FIRE_BTN = () => ({ x: canvas.width - 90, y: canvas.height - 90 });
@@ -174,17 +190,14 @@ let fireBtn = { active: false, id: null };
 canvas.addEventListener('touchstart', e => {
     e.preventDefault();
     if (state === STATES.START || state === STATES.DEAD) { initGame(); return; }
-    if (state === STATES.LEVELUP) {
-        handleUpgradeTap(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
-        return;
-    }
+    if (state === STATES.LEVELUP) { handleUpgradeTap(e.changedTouches[0].clientX, e.changedTouches[0].clientY); return; }
+    if (paused) return;
     for (const t of e.changedTouches) {
         const fb = FIRE_BTN();
         if (Math.hypot(t.clientX - fb.x, t.clientY - fb.y) < FIRE_R + 30) {
             fireBtn.active = true; fireBtn.id = t.identifier;
         } else if (!joy.active) {
-            Object.assign(joy, { active: true, id: t.identifier,
-                                 sx: t.clientX, sy: t.clientY, dx: 0, dy: 0 });
+            Object.assign(joy, { active: true, id: t.identifier, sx: t.clientX, sy: t.clientY, dx: 0, dy: 0 });
         }
     }
 }, { passive: false });
@@ -220,7 +233,7 @@ window.addEventListener('keydown', e => {
 });
 window.addEventListener('keyup', e => { keys[e.key] = false; });
 
-// ─── Upgrade selection ────────────────────────────────────────────────────────
+// ─── Upgrade tap ──────────────────────────────────────────────────────────────
 function handleUpgradeTap(cx, cy) {
     const cards = cardRects();
     for (let i = 0; i < cards.length; i++) {
@@ -243,31 +256,35 @@ function spawnEnemy() {
     enemies.push({
         x: clamp(player.x + Math.cos(ang) * dist, 20, WORLD_W - 20),
         y: clamp(player.y + Math.sin(ang) * dist, 20, WORLD_H - 20),
-        radius: 14, speed: 1.2 + Math.random() * 1.8, hp: 1, xpVal: 10,
+        radius: 14,
+        speed: (0.9 + Math.random() * 1.35),  // ~25% slower than before
+        hp: 3,                                  // 3× more HP
+        xpVal: 10,
+        hitFlash: 0,
+        shieldHitCooldown: 0,
     });
 }
 
 function shoot() {
     if (player.shootCooldown > 0) return;
     player.shootCooldown = dbg.fireRateOverride ?? player.fireRate;
-
-    // spread bullets evenly around aim angle (15° between each)
-    const spreadStep = 15 * Math.PI / 180;
-    const halfSpread = (player.projectiles - 1) / 2 * spreadStep;
-    for (let i = 0; i < player.projectiles; i++) {
-        const ang = player.angle - halfSpread + i * spreadStep;
+    for (const offset of bulletOffsets(player.projectiles)) {
+        const ang = player.angle + offset;
         bullets.push({
             x: player.x + Math.cos(player.angle) * player.radius,
             y: player.y + Math.sin(player.angle) * player.radius,
-            dx: Math.cos(ang) * 10, dy: Math.sin(ang) * 10,
+            dx: Math.cos(ang) * 10,
+            dy: Math.sin(ang) * 10,
             radius: 5, life: 120,
+            pierceLeft: player.pierceCount,
+            hitEnemies: new Set(),
         });
     }
 }
 
 // ─── Update ───────────────────────────────────────────────────────────────────
 function update() {
-    if (state !== STATES.PLAYING) return;
+    if (state !== STATES.PLAYING || paused) return;
 
     // Player movement
     let mx = 0, my = 0;
@@ -287,18 +304,18 @@ function update() {
     const vw = canvas.width / dbg.zoom, vh = canvas.height / dbg.zoom;
     let best = null, bestDist = Infinity;
     for (const e of enemies) {
-        const inView = e.x > camera.x - 30 && e.x < camera.x + vw + 30 &&
-                       e.y > camera.y - 30 && e.y < camera.y + vh + 30;
-        if (!inView) continue;
+        if (e.x < camera.x - 30 || e.x > camera.x + vw + 30) continue;
+        if (e.y < camera.y - 30 || e.y > camera.y + vh + 30) continue;
         const d = Math.hypot(e.x - player.x, e.y - player.y);
         if (d < bestDist) { bestDist = d; best = e; }
     }
     if (best) player.angle = Math.atan2(best.y - player.y, best.x - player.x);
 
-    // Shoot & cooldowns
+    // Shoot & timers
     if (keys[' '] || keys['z'] || fireBtn.active) shoot();
     if (player.shootCooldown > 0) player.shootCooldown--;
     if (player.invincible > 0)    player.invincible--;
+    player.shieldAngle += SHIELD_SPEED;
 
     // Move bullets
     bullets = bullets.filter(b => b.life > 0);
@@ -313,41 +330,73 @@ function update() {
         if (spawnInterval > 40) spawnInterval--;
     }
 
-    // Move enemies toward player
+    // Move enemies + update per-enemy timers
     for (const e of enemies) {
         const dx = player.x - e.x, dy = player.y - e.y;
         const len = Math.hypot(dx, dy);
         e.x += dx / len * e.speed;
         e.y += dy / len * e.speed;
+        if (e.hitFlash > 0)          e.hitFlash--;
+        if (e.shieldHitCooldown > 0) e.shieldHitCooldown--;
     }
 
-    // Bullet ↔ enemy collisions
+    // ── Collision phase ───────────────────────────────────────────────────────
     const dead = new Set();
+
+    // Bullet ↔ enemy
     for (const b of bullets) {
         for (const e of enemies) {
-            if (dead.has(e)) continue;
+            if (dead.has(e) || b.hitEnemies.has(e)) continue;
             if (Math.hypot(b.x - e.x, b.y - e.y) >= b.radius + e.radius) continue;
-            b.life = 0;
-            if (--e.hp <= 0) {
-                dead.add(e);
-                score++;
-                xp += e.xpVal;
-                if (xp >= xpToNext) { upgradeChoices = pickUpgrades(2); state = STATES.LEVELUP; }
+            b.hitEnemies.add(e);
+            e.hp--;
+            e.hitFlash = 8;
+            if (b.pierceLeft <= 0) b.life = 0;
+            else b.pierceLeft--;
+            if (e.hp <= 0) dead.add(e);
+        }
+    }
+
+    // Shield ↔ enemy
+    for (let i = 0; i < player.shields; i++) {
+        const ang = player.shieldAngle + (i / player.shields) * Math.PI * 2;
+        const sx  = player.x + Math.cos(ang) * SHIELD_ORBIT_R;
+        const sy  = player.y + Math.sin(ang) * SHIELD_ORBIT_R;
+        for (const e of enemies) {
+            if (dead.has(e)) continue;
+            const dist = Math.hypot(e.x - sx, e.y - sy);
+            if (dist >= SHIELD_R + e.radius) continue;
+            // Push enemy out of shield
+            if (dist > 0) {
+                const overlap = SHIELD_R + e.radius - dist;
+                e.x += (e.x - sx) / dist * overlap;
+                e.y += (e.y - sy) / dist * overlap;
+            }
+            // Damage tick
+            if (e.shieldHitCooldown <= 0) {
+                e.hp -= SHIELD_DAMAGE;
+                e.hitFlash = 8;
+                e.shieldHitCooldown = SHIELD_HIT_COOLDOWN;
+                if (e.hp <= 0) dead.add(e);
             }
         }
     }
-    enemies = enemies.filter(e => !dead.has(e));
 
-    // Player ↔ enemy collision
-    // Dark hearts are lost first (they're a buffer); when gone, normal lives are lost
+    // Process kills
+    let newXP = 0;
+    for (const e of dead) { score++; newXP += e.xpVal; }
+    enemies = enemies.filter(e => !dead.has(e));
+    if (newXP > 0) {
+        xp += newXP;
+        if (xp >= xpToNext) { upgradeChoices = pickUpgrades(2); state = STATES.LEVELUP; }
+    }
+
+    // Player ↔ enemy — dark hearts lost first, then normal hearts
     if (!dbg.godMode && player.invincible === 0) {
         for (const e of enemies) {
             if (Math.hypot(player.x - e.x, player.y - e.y) >= player.radius + e.radius - 4) continue;
-            if (player.darkHearts > 0) {
-                player.darkHearts--;            // dark heart lost — slot disappears permanently
-            } else {
-                lives--;
-            }
+            if (player.darkHearts > 0) player.darkHearts--;
+            else lives--;
             player.invincible = 90;
             enemies = enemies.filter(en => en !== e);
             if (lives <= 0 && player.darkHearts <= 0) state = STATES.DEAD;
@@ -359,46 +408,38 @@ function update() {
 // ─── Draw helpers ─────────────────────────────────────────────────────────────
 function drawFloor() {
     const vw = canvas.width / dbg.zoom, vh = canvas.height / dbg.zoom;
-    const x0 = Math.floor(camera.x / TILE_SIZE) - 1;
-    const y0 = Math.floor(camera.y / TILE_SIZE) - 1;
-    const x1 = Math.ceil((camera.x + vw) / TILE_SIZE) + 1;
-    const y1 = Math.ceil((camera.y + vh) / TILE_SIZE) + 1;
+    const x0 = Math.floor(camera.x / TILE_SIZE) - 1, x1 = Math.ceil((camera.x + vw) / TILE_SIZE) + 1;
+    const y0 = Math.floor(camera.y / TILE_SIZE) - 1, y1 = Math.ceil((camera.y + vh) / TILE_SIZE) + 1;
     for (let tx = x0; tx <= x1; tx++) {
         for (let ty = y0; ty <= y1; ty++) {
             const wx = tx * TILE_SIZE, wy = ty * TILE_SIZE;
-            const h = Math.abs((tx * 73856093) ^ (ty * 19349663)) % 1000;
-            const v = 20 + Math.floor(h / 1000 * 16);
+            const h  = Math.abs((tx * 73856093) ^ (ty * 19349663)) % 1000;
+            const v  = 20 + Math.floor(h / 1000 * 16);
             ctx.fillStyle = `rgb(${v+3},${v+1},${v+6})`;
             ctx.fillRect(wx, wy, TILE_SIZE, TILE_SIZE);
             ctx.fillStyle = 'rgba(0,0,0,0.38)';
             ctx.fillRect(wx, wy, TILE_SIZE, 2);
             ctx.fillRect(wx, wy, 2, TILE_SIZE);
-            if (h < 60) {
-                ctx.fillStyle = 'rgba(255,255,255,0.03)';
-                ctx.fillRect(wx + 3, wy + 3, TILE_SIZE - 6, TILE_SIZE - 6);
-            }
+            if (h < 60) { ctx.fillStyle = 'rgba(255,255,255,0.03)'; ctx.fillRect(wx+3, wy+3, TILE_SIZE-6, TILE_SIZE-6); }
         }
     }
 }
 
-// color: filled red, empty dark gray, dark heart purple
 function drawHeart(x, y, sz, color) {
     ctx.save(); ctx.translate(x, y);
     ctx.beginPath();
     ctx.moveTo(0, sz * 0.3);
     ctx.bezierCurveTo(-sz * 0.5, -sz * 0.3, -sz, sz * 0.1, 0, sz);
     ctx.bezierCurveTo( sz, sz * 0.1,  sz * 0.5, -sz * 0.3, 0, sz * 0.3);
-    ctx.fillStyle = color;
-    ctx.fill(); ctx.restore();
+    ctx.fillStyle = color; ctx.fill(); ctx.restore();
 }
 
 function roundRect(x, y, w, h, r) {
     ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.lineTo(x + w - r, y);       ctx.quadraticCurveTo(x + w, y,     x + w, y + r);
-    ctx.lineTo(x + w, y + h - r);   ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-    ctx.lineTo(x + r, y + h);       ctx.quadraticCurveTo(x,     y + h, x, y + h - r);
-    ctx.lineTo(x, y + r);           ctx.quadraticCurveTo(x,     y,     x + r, y);
+    ctx.moveTo(x+r, y); ctx.lineTo(x+w-r, y); ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+    ctx.lineTo(x+w, y+h-r); ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+    ctx.lineTo(x+r, y+h); ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+    ctx.lineTo(x, y+r); ctx.quadraticCurveTo(x, y, x+r, y);
     ctx.closePath();
 }
 
@@ -415,34 +456,50 @@ function drawWorld() {
 
     drawFloor();
 
+    // Bullets
     for (const b of bullets) {
         ctx.beginPath(); ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
         ctx.fillStyle = '#ffe066'; ctx.shadowBlur = 10; ctx.shadowColor = '#ffe066';
         ctx.fill(); ctx.shadowBlur = 0;
     }
 
+    // Enemies
     for (const e of enemies) {
         ctx.beginPath(); ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
         ctx.fillStyle = '#ff3333'; ctx.shadowBlur = 12; ctx.shadowColor = '#f00';
         ctx.fill(); ctx.shadowBlur = 0;
+        // Eyes
         ctx.fillStyle = '#fff';
-        ctx.beginPath();
-        ctx.arc(e.x - 4, e.y - 3, 3,   0, Math.PI * 2);
-        ctx.arc(e.x + 4, e.y - 3, 3,   0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(e.x-4, e.y-3, 3, 0, Math.PI*2); ctx.arc(e.x+4, e.y-3, 3, 0, Math.PI*2); ctx.fill();
         ctx.fillStyle = '#000';
-        ctx.beginPath();
-        ctx.arc(e.x - 4, e.y - 3, 1.5, 0, Math.PI * 2);
-        ctx.arc(e.x + 4, e.y - 3, 1.5, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(e.x-4, e.y-3, 1.5, 0, Math.PI*2); ctx.arc(e.x+4, e.y-3, 1.5, 0, Math.PI*2); ctx.fill();
+        // Hit flash — white pulse on damage
+        if (e.hitFlash > 0) {
+            ctx.globalAlpha = (e.hitFlash / 8) * 0.75;
+            ctx.beginPath(); ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffffff'; ctx.fill();
+            ctx.globalAlpha = 1;
+        }
     }
 
+    // Shields
+    for (let i = 0; i < player.shields; i++) {
+        const ang = player.shieldAngle + (i / player.shields) * Math.PI * 2;
+        const sx  = player.x + Math.cos(ang) * SHIELD_ORBIT_R;
+        const sy  = player.y + Math.sin(ang) * SHIELD_ORBIT_R;
+        ctx.beginPath(); ctx.arc(sx, sy, SHIELD_R, 0, Math.PI * 2);
+        ctx.fillStyle = '#44aaff'; ctx.shadowBlur = 12; ctx.shadowColor = '#4af';
+        ctx.fill(); ctx.shadowBlur = 0;
+    }
+
+    // Player
     const blink = player.invincible > 0 && !dbg.godMode && Math.floor(player.invincible / 5) % 2 === 0;
     ctx.globalAlpha = blink ? 0.3 : 1;
     ctx.save();
     ctx.translate(player.x, player.y); ctx.rotate(player.angle);
     ctx.beginPath(); ctx.arc(0, 0, player.radius, 0, Math.PI * 2);
     ctx.fillStyle   = dbg.godMode ? '#ffd700' : '#4fc3f7';
-    ctx.shadowBlur  = 16;
-    ctx.shadowColor = dbg.godMode ? '#ffd700' : '#4fc3f7';
+    ctx.shadowBlur  = 16; ctx.shadowColor = dbg.godMode ? '#ffd700' : '#4fc3f7';
     ctx.fill(); ctx.shadowBlur = 0;
     ctx.fillStyle = dbg.godMode ? '#ffe066' : '#81d4fa';
     ctx.fillRect(2, -5, player.radius + 6, 10);
@@ -456,34 +513,31 @@ function drawHUD() {
     // Score
     ctx.fillStyle = '#fff'; ctx.textAlign = 'left';
     ctx.font = 'bold 20px monospace';
-    ctx.fillText('SCORE: ' + score, 14, 32);
-    if (dbg.godMode) {
-        ctx.fillStyle = '#ffd700'; ctx.font = 'bold 12px monospace';
-        ctx.fillText('GOD MODE', 14, 50);
-    }
+    ctx.fillText('SCORE: ' + score, 14, 30);
+    if (dbg.godMode) { ctx.fillStyle = '#ffd700'; ctx.font = 'bold 12px monospace'; ctx.fillText('GOD MODE', 14, 48); }
 
-    // Hearts — normal slots (always shown), then dark hearts (no empty slot)
-    const totalSlots = player.maxHearts + player.darkHearts;
-    for (let i = 0; i < totalSlots; i++) {
-        const x = canvas.width - 120 - i * 32;
-        const isDark   = i >= player.maxHearts;              // dark heart slot
-        const isFilled = isDark ? true : i < lives;          // dark hearts always "filled"
-        const color = isDark      ? '#8844dd'                // purple = dark heart
-                    : isFilled    ? '#ff4444'                // red    = normal heart
-                                  : '#2a2a2a';               // gray   = empty slot
-        drawHeart(x, 16, 9, color);
+    // Hearts — below score, left-aligned: red hearts then purple (dark) hearts
+    for (let i = 0; i < player.maxHearts; i++)
+        drawHeart(20 + i * 26, 50, 9, i < lives ? '#ff4444' : '#2a2a2a');
+    for (let i = 0; i < player.darkHearts; i++)
+        drawHeart(20 + (player.maxHearts + i) * 26, 50, 9, '#8844dd');
+
+    // Pause indicator
+    if (paused) {
+        ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.textAlign = 'center';
+        ctx.font = 'bold 16px monospace';
+        ctx.fillText('PAUSED', canvas.width / 2, 24);
     }
 
     // XP bar
     const bw = Math.min(280, canvas.width * 0.55), bh = 13;
     const bx = (canvas.width - bw) / 2, by = canvas.height - 28;
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';  ctx.fillRect(bx - 1, by - 1, bw + 2, bh + 2);
-    ctx.fillStyle = '#111';              ctx.fillRect(bx, by, bw, bh);
-    const grad = ctx.createLinearGradient(bx, 0, bx + bw, 0);
+    ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(bx-1, by-1, bw+2, bh+2);
+    ctx.fillStyle = '#111';             ctx.fillRect(bx, by, bw, bh);
+    const grad = ctx.createLinearGradient(bx, 0, bx+bw, 0);
     grad.addColorStop(0, '#7b2fff'); grad.addColorStop(1, '#c084fc');
     ctx.fillStyle = grad; ctx.fillRect(bx, by, bw * Math.min(xp / xpToNext, 1), bh);
-    ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 1;
-    ctx.strokeRect(bx, by, bw, bh);
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 1; ctx.strokeRect(bx, by, bw, bh);
     ctx.fillStyle = '#bbb'; ctx.font = '11px monospace'; ctx.textAlign = 'center';
     ctx.fillText(`LVL ${level}  ${xp} / ${xpToNext} XP`, canvas.width / 2, by - 4);
 
@@ -505,10 +559,7 @@ function drawHUD() {
 }
 
 function drawStartScreen() {
-    ctx.save();
-    ctx.scale(dbg.zoom, dbg.zoom);
-    drawFloor();
-    ctx.restore();
+    ctx.save(); ctx.scale(dbg.zoom, dbg.zoom); drawFloor(); ctx.restore();
     dimScreen(0.68);
     ctx.textAlign = 'center';
     ctx.fillStyle = '#4fc3f7'; ctx.font = 'bold 34px monospace';
@@ -526,7 +577,6 @@ function drawLevelUpOverlay() {
     ctx.fillText('LEVEL UP!', canvas.width / 2, canvas.height / 2 - 145);
     ctx.fillStyle = '#888'; ctx.font = '15px monospace';
     ctx.fillText('Tap to choose an upgrade', canvas.width / 2, canvas.height / 2 - 115);
-
     for (const [i, upg] of upgradeChoices.entries()) {
         const c = cardRects()[i];
         roundRect(c.x, c.y, c.w, c.h, 10);
@@ -535,8 +585,7 @@ function drawLevelUpOverlay() {
         ctx.fillStyle = '#ddb8ff'; ctx.font = 'bold 15px monospace'; ctx.textAlign = 'center';
         ctx.fillText(upg.name, c.x + c.w / 2, c.y + 38);
         ctx.fillStyle = '#888'; ctx.font = '12px monospace';
-        upg.desc.split('\n').forEach((line, li) =>
-            ctx.fillText(line, c.x + c.w / 2, c.y + 66 + li * 18));
+        upg.desc.split('\n').forEach((line, li) => ctx.fillText(line, c.x + c.w / 2, c.y + 66 + li * 18));
     }
 }
 
@@ -556,12 +605,9 @@ function drawGameOverOverlay() {
 function draw() {
     ctx.fillStyle = '#0a0a0f';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    if (state === STATES.START)   { drawStartScreen();   return; }
-
+    if (state === STATES.START) { drawStartScreen(); return; }
     drawWorld();
     drawHUD();
-
     if (state === STATES.LEVELUP) drawLevelUpOverlay();
     if (state === STATES.DEAD)    drawGameOverOverlay();
 }
