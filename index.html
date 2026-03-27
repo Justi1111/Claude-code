@@ -417,11 +417,13 @@ function update() {
             if (dead.has(e)) continue;
             const dist = Math.hypot(e.x - sx, e.y - sy);
             if (dist >= SHIELD_R + e.radius) continue;
-            // Push enemy out of shield
-            if (dist > 0) {
-                const overlap = SHIELD_R + e.radius - dist;
-                e.x += (e.x - sx) / dist * overlap;
-                e.y += (e.y - sy) / dist * overlap;
+            // Push enemy AWAY FROM PLAYER (radially outward), not just off shield
+            const pdx = e.x - player.x, pdy = e.y - player.y;
+            const pdist = Math.hypot(pdx, pdy);
+            if (pdist > 0) {
+                const targetDist = SHIELD_ORBIT_R + e.radius + SHIELD_R;
+                e.x = player.x + pdx / pdist * targetDist;
+                e.y = player.y + pdy / pdist * targetDist;
             }
             // Damage tick
             if (e.shieldHitCooldown <= 0) {
