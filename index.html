@@ -124,6 +124,7 @@ const SHIELD_HIT_COOLDOWN = 30;   // frames between damage ticks
 // ─── Upgrades ─────────────────────────────────────────────────────────────────
 const UPGRADE_POOL = [
     { id: 'firerate',     name: '+20% Fire Rate',  desc: 'Shoot 20% faster' },
+    { id: 'damage',       name: '+1 Damage',       desc: 'Bullets deal 1 extra\ndamage per hit' },
     { id: 'multishot',    name: '+1 Projectile',   desc: 'Fire an extra bullet\nwith each shot' },
     { id: 'heal',         name: 'Heal 1 Heart',    desc: 'Restore one lost heart' },
     { id: 'darkheart',    name: 'Dark Heart',      desc: 'Gain an extra life.\nCannot be healed.' },
@@ -144,6 +145,7 @@ function pickUpgrades(n) {
 function applyUpgrade(upg) {
     switch (upg.id) {
         case 'firerate':    player.fireRate    = Math.max(2, Math.floor(player.fireRate * 0.8)); break;
+        case 'damage':      player.damage++;       break;
         case 'multishot':   player.projectiles++;  break;
         case 'heal':        lives = Math.min(lives + 1, player.maxHearts); break;
         case 'darkheart':   player.darkHearts++;   break;
@@ -188,9 +190,10 @@ function initGame() {
         x: WORLD_W / 2, y: WORLD_H / 2,
         radius: 18, speed: 4, angle: 0,
         shootCooldown: 0, invincible: 0,
-        fireRate:    48,   // frames between shots (was 12, now 4× slower)
+        fireRate:    48,
         projectiles: 1,
-        pierceCount: 0,    // extra enemies a bullet passes through
+        damage:      1,
+        pierceCount: 0,
         maxHearts:   3,
         darkHearts:  0,
         shields:     0,
@@ -283,19 +286,29 @@ function handleUpgradeTap(cx, cy) {
     }
 }
 
-// ─── Spawn / shoot ────────────────────────────────────────────────────────────
-function spawnEnemy() {
-    const ang  = Math.random() * Math.PI * 2;
+// ─── Enemy types ──────────────────────────────────────────────────────────────
+const ENEMY_TYPES = {
+    normal: { radius: 14, speed: () => 0.9 + Math.random() * 1.35, hp: 3,  xpVal: 10, color: '#ff3333', glow: '#f00' },
+    fast:   { radius: 9,  speed: () => 2.8 + Math.random() * 1.2,  hp: 1,  xpVal: 15, color: '#ff8800', glow: '#f80' },
+    tank:   { radius: 22, speed: () => 0.45 + Math.random() * 0.3, hp: 18, xpVal: 40, color: '#9933cc', glow: '#a0f' },
+};
+
+function spawnEnemy(type) {
+    if (!type) {
+        // Weight by level: fast after lvl5, tank after lvl10
+        const r = Math.random();
+        if (level >= 10 && r < 0.15) type = 'tank';
+        else if (level >= 5 && r < 0.40) type = 'fast';
+        else type = 'normal';
+    }
+    const t   = ENEMY_TYPES[type];
+    const ang = Math.random() * Math.PI * 2;
     const dist = Math.max(canvas.width, canvas.height) / dbg.zoom * 0.6;
     enemies.push({
         x: clamp(player.x + Math.cos(ang) * dist, 20, WORLD_W - 20),
         y: clamp(player.y + Math.sin(ang) * dist, 20, WORLD_H - 20),
-        radius: 14,
-        speed: (0.9 + Math.random() * 1.35),  // ~25% slower than before
-        hp: 3,                                  // 3× more HP
-        xpVal: 10,
-        hitFlash: 0,
-        shieldHitCooldown: 0,
+        type, radius: t.radius, speed: t.speed(), hp: t.hp, xpVal: t.xpVal,
+        hitFlash: 0, shieldHitCooldown: 0,
     });
 }
 
@@ -359,9 +372,9 @@ function update() {
     spawnTimer++;
     if (spawnTimer >= spawnInterval) {
         spawnTimer = 0;
-        const count = 1 + (score > 5 ? 1 : 0) + (score > 15 ? 1 : 0);
+        const count = 2 + Math.floor(level / 2) + (score > 20 ? 2 : 0);
         for (let i = 0; i < count; i++) spawnEnemy();
-        if (spawnInterval > 40) spawnInterval--;
+        if (spawnInterval > 30) spawnInterval = Math.max(30, spawnInterval - 2);
     }
 
     // Move enemies + update per-enemy timers
@@ -400,7 +413,7 @@ function update() {
             if (dead.has(e) || b.hitEnemies.has(e)) continue;
             if (Math.hypot(b.x - e.x, b.y - e.y) >= b.radius + e.radius) continue;
             b.hitEnemies.add(e);
-            e.hp--;
+            e.hp -= player.damage;
             e.hitFlash = 8;
             if (b.pierceLeft <= 0) { b.life = 0; break; }
             else b.pierceLeft--;
@@ -518,14 +531,23 @@ function drawWorld() {
 
     // Enemies
     for (const e of enemies) {
+        const et = ENEMY_TYPES[e.type] || ENEMY_TYPES.normal;
         ctx.beginPath(); ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
-        ctx.fillStyle = '#ff3333'; ctx.shadowBlur = 12; ctx.shadowColor = '#f00';
+        ctx.fillStyle = et.color; ctx.shadowBlur = 12; ctx.shadowColor = et.glow;
         ctx.fill(); ctx.shadowBlur = 0;
-        // Eyes
+        // Eyes (scaled to radius)
+        const es = e.radius / 14;
         ctx.fillStyle = '#fff';
-        ctx.beginPath(); ctx.arc(e.x-4, e.y-3, 3, 0, Math.PI*2); ctx.arc(e.x+4, e.y-3, 3, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(e.x-4*es, e.y-3*es, 3*es, 0, Math.PI*2); ctx.arc(e.x+4*es, e.y-3*es, 3*es, 0, Math.PI*2); ctx.fill();
         ctx.fillStyle = '#000';
-        ctx.beginPath(); ctx.arc(e.x-4, e.y-3, 1.5, 0, Math.PI*2); ctx.arc(e.x+4, e.y-3, 1.5, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(e.x-4*es, e.y-3*es, 1.5*es, 0, Math.PI*2); ctx.arc(e.x+4*es, e.y-3*es, 1.5*es, 0, Math.PI*2); ctx.fill();
+        // HP bar for tank
+        if (e.type === 'tank') {
+            const bw = e.radius * 2.2, bh = 4;
+            const bx = e.x - bw/2, by = e.y + e.radius + 4;
+            ctx.fillStyle = '#333'; ctx.fillRect(bx, by, bw, bh);
+            ctx.fillStyle = '#a855f7'; ctx.fillRect(bx, by, bw * Math.max(0, e.hp / ENEMY_TYPES.tank.hp), bh);
+        }
         // Hit flash — white pulse on damage
         if (e.hitFlash > 0) {
             ctx.globalAlpha = (e.hitFlash / 8) * 0.75;
