@@ -619,12 +619,41 @@ function drawMenuEnemies() {
 
 function drawPlayerPreview() {
     ctx.globalAlpha = 0.4;
-    ctx.beginPath(); ctx.arc(canvas.width / 2, canvas.height / 2, 18, 0, Math.PI * 2);
-    ctx.fillStyle = '#4fc3f7'; ctx.shadowBlur = 16; ctx.shadowColor = '#4fc3f7';
-    ctx.fill(); ctx.shadowBlur = 0;
-    ctx.fillStyle = '#81d4fa';
-    ctx.fillRect(canvas.width / 2 + 2, canvas.height / 2 - 5, 24, 10);
+    drawEyePlayer(canvas.width / 2, canvas.height / 2, frameCount * 0.01, false, '#4fc3f7');
     ctx.globalAlpha = 1;
+}
+
+// Reusable eye player draw — call with ctx already in world/screen coords
+// x, y: center; angle: aim direction; showBarrel: bool; baseColor: outer circle fill
+function drawEyePlayer(x, y, angle, showBarrel, baseColor) {
+    const R = 18;
+    // Outer circle
+    ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2);
+    ctx.fillStyle = baseColor;
+    ctx.shadowBlur = 16; ctx.shadowColor = baseColor;
+    ctx.fill(); ctx.shadowBlur = 0;
+    // Iris
+    ctx.beginPath(); ctx.arc(x, y, 10, 0, Math.PI * 2);
+    ctx.fillStyle = '#44aaff'; ctx.fill();
+    // Pupil (offset 3px toward aim)
+    const px = x + Math.cos(angle) * 3;
+    const py = y + Math.sin(angle) * 3;
+    ctx.beginPath(); ctx.arc(px, py, 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#0a0a1a'; ctx.fill();
+    // Highlight
+    ctx.beginPath(); ctx.arc(px + 1, py - 1, 1.5, 0, Math.PI * 2);
+    ctx.fillStyle = '#fff'; ctx.fill();
+    // Barrel
+    if (showBarrel) {
+        const bx = x + Math.cos(angle) * R;
+        const by = y + Math.sin(angle) * R;
+        ctx.save();
+        ctx.translate(bx, by); ctx.rotate(angle);
+        ctx.beginPath();
+        ctx.roundRect(0, -2, 10, 4, 2);
+        ctx.fillStyle = baseColor; ctx.fill();
+        ctx.restore();
+    }
 }
 
 // ─── Draw sections ────────────────────────────────────────────────────────────
@@ -683,15 +712,7 @@ function drawWorld() {
     // Player
     const blink = player.invincible > 0 && !dbg.godMode && Math.floor(player.invincible / 5) % 2 === 0;
     ctx.globalAlpha = blink ? 0.3 : 1;
-    ctx.save();
-    ctx.translate(player.x, player.y); ctx.rotate(player.angle);
-    ctx.beginPath(); ctx.arc(0, 0, player.radius, 0, Math.PI * 2);
-    ctx.fillStyle   = dbg.godMode ? '#ffd700' : '#4fc3f7';
-    ctx.shadowBlur  = 16; ctx.shadowColor = dbg.godMode ? '#ffd700' : '#4fc3f7';
-    ctx.fill(); ctx.shadowBlur = 0;
-    ctx.fillStyle = dbg.godMode ? '#ffe066' : '#81d4fa';
-    ctx.fillRect(2, -5, player.radius + 6, 10);
-    ctx.restore();
+    drawEyePlayer(player.x, player.y, player.angle, true, dbg.godMode ? '#ffd700' : '#4fc3f7');
     ctx.globalAlpha = 1;
 
     ctx.restore();
