@@ -627,25 +627,24 @@ function drawPlayerPreview() {
 // x, y: center; angle: aim direction; showBarrel: bool; baseColor: outer circle fill
 function drawEyePlayer(x, y, angle, showBarrel, baseColor) {
     const R = 18;
-    // Sclera
+    // Glow around the whole eye
     ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255,255,255,0.95)'; ctx.fill();
-    ctx.strokeStyle = baseColor; ctx.lineWidth = 2;
-    ctx.shadowBlur = 16; ctx.shadowColor = baseColor;
-    ctx.stroke(); ctx.shadowBlur = 0;
-    // Iris — radial gradient
-    const grad = ctx.createRadialGradient(x, y, 2, x, y, 13);
-    grad.addColorStop(0, '#88ccff');
-    grad.addColorStop(1, '#1a6aaa');
-    ctx.beginPath(); ctx.arc(x, y, 13, 0, Math.PI * 2);
-    ctx.fillStyle = grad; ctx.fill();
-    // Pupil
-    const px = x + Math.cos(angle) * 4;
-    const py = y + Math.sin(angle) * 4;
-    ctx.beginPath(); ctx.arc(px, py, 7, 0, Math.PI * 2);
+    ctx.shadowBlur = 14; ctx.shadowColor = baseColor;
+    ctx.strokeStyle = baseColor; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.shadowBlur = 0;
+    // Sclera — white
+    ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff'; ctx.fill();
+    // Iris
+    ctx.beginPath(); ctx.arc(x, y, 10, 0, Math.PI * 2);
+    ctx.fillStyle = baseColor; ctx.fill();
+    // Pupil — offset toward aim
+    const px = x + Math.cos(angle) * 3;
+    const py = y + Math.sin(angle) * 3;
+    ctx.beginPath(); ctx.arc(px, py, 5.5, 0, Math.PI * 2);
     ctx.fillStyle = '#050510'; ctx.fill();
     // Highlight
-    ctx.beginPath(); ctx.arc(px + 2, py - 2, 2, 0, Math.PI * 2);
+    ctx.beginPath(); ctx.arc(px + 2, py - 2, 1.8, 0, Math.PI * 2);
     ctx.fillStyle = '#ffffff'; ctx.fill();
     // Barrel
     if (showBarrel) {
