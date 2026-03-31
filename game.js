@@ -51,70 +51,51 @@ const STATES    = { START: 'start', PLAYING: 'playing', LEVELUP: 'levelup', DEAD
 const SHIELD_ORBIT_R      = 50;
 const SHIELD_R            = 8;
 const SHIELD_SPEED        = Math.PI / 70;
-const SHIELD_DAMAGE       = 0.25;
+const SHIELD_DAMAGE       = 1;
 const SHIELD_HIT_COOLDOWN = 30;
 
 // ─── Upgrades ─────────────────────────────────────────────────────────────────
 const UPGRADE_POOL = [
-    { id: 'firerate',     name: '+20% Fire Rate',  desc: 'Shoot 20% faster' },
-    { id: 'damage',       name: '+0.5 Damage',     desc: 'Bullets deal 0.5 extra\ndamage per hit' },
-    { id: 'multishot',    name: '+1 Projectile',   desc: 'Fire an extra bullet\nwith each shot' },
-    { id: 'heal',         name: 'Heal 1 Heart',    desc: 'Restore one lost heart' },
-    { id: 'darkheart',    name: 'Dark Heart',      desc: 'Gain an extra life.\nCannot be healed.' },
-    { id: 'shield',       name: 'Shield',          desc: 'Orbiting shield that\ndamages and pushes enemies' },
-    { id: 'penetration',  name: 'Penetration',     desc: 'Bullets pierce through\none extra enemy' },
+    { id: 'firerate',    name: '+20% Fire Rate', desc: 'Shoot 20% faster' },
+    { id: 'damage',      name: '+50% Damage',    desc: 'Multiply bullet damage\nby 1.5×' },
+    { id: 'directions',  name: '+1 Direction',   desc: 'Add a new shoot\ndirection' },
+    { id: 'spread',      name: 'Spread Shot',    desc: 'Fire extra bullets\nper direction' },
+    { id: 'focus',       name: 'Focus',          desc: 'Tighten bullet spread\nfor better accuracy' },
+    { id: 'heal',        name: 'Heal 1 Heart',   desc: 'Restore one lost heart' },
+    { id: 'darkheart',   name: 'Dark Heart',     desc: 'Gain an extra life.\nCannot be healed.' },
+    { id: 'shield',      name: 'Shield',         desc: 'Orbiting shield that\ndamages and pushes enemies' },
+    { id: 'penetration', name: 'Penetration',    desc: 'Bullets pierce through\none extra enemy' },
 ];
 
 function pickUpgrades(n) {
     const pool = UPGRADE_POOL.filter(u => {
-        if (u.id === 'heal'      && lives >= player.maxHearts) return false;
-        if (u.id === 'darkheart' && player.darkHearts >= 3)    return false;
-        if (u.id === 'shield'    && player.shields >= 8)       return false;
-        if (u.id === 'multishot' && player.projectiles >= 5)   return false;
+        if (u.id === 'heal'       && lives >= player.maxHearts)  return false;
+        if (u.id === 'darkheart'  && player.darkHearts >= 3)     return false;
+        if (u.id === 'shield'     && player.shields >= 8)        return false;
+        if (u.id === 'directions' && player.directions >= 4)     return false;
+        if (u.id === 'spread'     && player.spreadCount >= 5)    return false;
+        if (u.id === 'focus'      && player.spreadAngle <= 4)    return false;
         return true;
     });
-    // Weight multishot down when player already has many projectiles
-    const weighted = [];
-    for (const u of pool) {
-        const copies = (u.id === 'multishot' && player.projectiles === 4) ? 1
-                     : (u.id === 'multishot' && player.projectiles === 3) ? 2
-                     : 4;
-        for (let i = 0; i < copies; i++) weighted.push(u);
-    }
-    const seen = new Set();
-    const result = [];
-    const shuffled = weighted.sort(() => Math.random() - 0.5);
-    for (const u of shuffled) {
-        if (!seen.has(u.id)) { seen.add(u.id); result.push(u); }
-        if (result.length === n) break;
-    }
-    return result;
+    return [...pool].sort(() => Math.random() - 0.5).slice(0, n);
 }
 
 function applyUpgrade(upg) {
     switch (upg.id) {
-        case 'firerate':    player.fireRate    = Math.max(2, Math.floor(player.fireRate * 0.8)); break;
-        case 'damage':      player.damage += 0.5;  break;
-        case 'multishot':   if (player.projectiles < 5) player.projectiles++; break;
+        case 'firerate':    player.fireRate = Math.max(2, Math.floor(player.fireRate * 0.8)); break;
+        case 'damage':      player.damage = Math.round(player.damage * 1.5 * 10) / 10; break;
+        case 'directions':  if (player.directions < 4) player.directions++; break;
+        case 'spread':      player.spreadCount = player.spreadCount === 1 ? 3 : 5; break;
+        case 'focus':       player.spreadAngle = Math.max(4, player.spreadAngle * 0.6); break;
         case 'heal':        lives = Math.min(lives + 1, player.maxHearts); break;
-        case 'darkheart':   player.darkHearts++; player.speed = 4 * (1 + player.darkHearts * 0.05); break;
-        case 'shield':      player.shields++;      break;
-        case 'penetration': player.pierceCount++;  break;
+        case 'darkheart':   player.darkHearts++; break;
+        case 'shield':      player.shields += player.shields === 0 ? 2 : 1; break;
+        case 'penetration': player.pierceCount++; break;
     }
 }
 
 // ─── Utility ──────────────────────────────────────────────────────────────────
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-
-function bulletOffsets(n) {
-    const S = 15 * Math.PI / 180;
-    const offsets = [0];
-    for (let i = 1; offsets.length < n; i++) {
-        offsets.push(i * S);
-        if (offsets.length < n) offsets.push(-i * S);
-    }
-    return offsets;
-}
 
 function cardRects() {
     const cw = Math.min(300, canvas.width - 48);
@@ -148,10 +129,12 @@ function initGame() {
         x: WORLD_W / 2, y: WORLD_H / 2,
         radius: 18, speed: 4, angle: 0,
         shootCooldown: 0, invincible: 0,
-        fireRate:    48,
-        projectiles: 1,
-        damage:      1,
-        pierceCount: 0,
+        fireRate:     48,
+        directions:   1,
+        spreadCount:  1,
+        spreadAngle:  18,
+        damage:       1,
+        pierceCount:  0,
         maxHearts:   3,
         darkHearts:  0,
         shields:     0,
@@ -250,7 +233,7 @@ function handleUpgradeTap(cx, cy) {
             applyUpgrade(upgradeChoices[i]);
             xp = Math.max(0, xp - xpToNext);
             level++;
-            xpToNext = Math.floor(xpToNext * 1.25);
+            xpToNext = Math.floor(xpToNext * 1.22);
             state = STATES.PLAYING;
             return;
         }
@@ -325,9 +308,10 @@ function initMenuEnemies() {
 function spawnEnemy(type) {
     if (!type) {
         const r = Math.random();
-        const fastChance = level >= 5 ? Math.min(0.05 * (level - 4), 0.35) : 0;
-        if (level >= 10 && r < 0.15) type = 'tank';
-        else if (r < 0.15 + fastChance) type = 'fast';
+        const fastChance = level >= 5  ? Math.min(0.35, (level - 5)  * 0.04) : 0;
+        const tankChance = level >= 10 ? Math.min(0.15, (level - 10) * 0.03) : 0;
+        if (r < tankChance) type = 'tank';
+        else if (r < tankChance + fastChance) type = 'fast';
         else type = 'normal';
     }
     const t   = ENEMY_TYPES[type];
@@ -344,17 +328,22 @@ function spawnEnemy(type) {
 function shoot() {
     if (player.shootCooldown > 0) return;
     player.shootCooldown = dbg.fireRateOverride ?? player.fireRate;
-    for (const offset of bulletOffsets(player.projectiles)) {
-        const ang = player.angle + offset;
-        bullets.push({
-            x: player.x + Math.cos(player.angle) * player.radius,
-            y: player.y + Math.sin(player.angle) * player.radius,
-            dx: Math.cos(ang) * 10,
-            dy: Math.sin(ang) * 10,
-            radius: 5, life: 120,
-            pierceLeft: player.pierceCount,
-            hitEnemies: new Set(),
-        });
+    const baseAngles = [0, Math.PI, Math.PI / 2, -Math.PI / 2].slice(0, player.directions);
+    for (const baseAngle of baseAngles) {
+        for (let i = 0; i < player.spreadCount; i++) {
+            const offset = (i - (player.spreadCount - 1) / 2) * player.spreadAngle * Math.PI / 180;
+            const ang = player.angle + baseAngle + offset;
+            bullets.push({
+                x: player.x + Math.cos(player.angle) * player.radius,
+                y: player.y + Math.sin(player.angle) * player.radius,
+                dx: Math.cos(ang) * 10,
+                dy: Math.sin(ang) * 10,
+                radius: 5, life: 120,
+                pierceLeft: player.pierceCount,
+                damageMult: 1.0,
+                hitEnemies: new Set(),
+            });
+        }
     }
 }
 
@@ -371,8 +360,9 @@ function update() {
     if (joy.active) { mx = joy.dx / JOY_R; my = joy.dy / JOY_R; }
     const mlen = Math.hypot(mx, my);
     if (mlen > 0) {
-        player.x = clamp(player.x + mx / mlen * player.speed, player.radius, WORLD_W - player.radius);
-        player.y = clamp(player.y + my / mlen * player.speed, player.radius, WORLD_H - player.radius);
+        const effectiveSpeed = player.speed * (1 + player.darkHearts * 0.05 + (player.darkHearts === 3 ? 0.05 : 0));
+        player.x = clamp(player.x + mx / mlen * effectiveSpeed, player.radius, WORLD_W - player.radius);
+        player.y = clamp(player.y + my / mlen * effectiveSpeed, player.radius, WORLD_H - player.radius);
     }
     updateCamera();
 
@@ -450,11 +440,11 @@ function update() {
             if (dead.has(e) || b.hitEnemies.has(e)) continue;
             if (Math.hypot(b.x - e.x, b.y - e.y) >= b.radius + e.radius) continue;
             b.hitEnemies.add(e);
-            e.hp -= player.damage;
+            e.hp -= Math.max(0.1, player.damage * b.damageMult);
             e.hitFlash = 8;
             if (e.hp <= 0) dead.add(e);
             if (b.pierceLeft <= 0) { b.life = 0; break; }
-            else b.pierceLeft--;
+            else { b.pierceLeft--; b.damageMult *= 0.75; }
         }
     }
 

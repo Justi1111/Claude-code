@@ -152,8 +152,14 @@ function drawHUD() {
 
     for (let i = 0; i < player.maxHearts; i++)
         drawHeart(20 + i * 26, 50, 9, i < lives ? '#ff4444' : '#2a2a2a');
-    for (let i = 0; i < player.darkHearts; i++)
+    for (let i = 0; i < player.darkHearts; i++) {
+        if (player.darkHearts === 3) {
+            ctx.shadowBlur = 6 * (0.5 + 0.5 * Math.abs(Math.sin(frameCount * 0.1)));
+            ctx.shadowColor = '#8844dd';
+        }
         drawHeart(20 + (player.maxHearts + i) * 26, 50, 9, '#8844dd');
+        ctx.shadowBlur = 0;
+    }
 
     if (paused) {
         ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.textAlign = 'center';
