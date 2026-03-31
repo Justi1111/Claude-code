@@ -113,7 +113,7 @@ document.getElementById('btn-killall').addEventListener('click', () => {
 const WORLD_W   = 4000;
 const WORLD_H   = 4000;
 const TILE_SIZE = 64;
-const STATES    = { START: 'start', PLAYING: 'playing', LEVELUP: 'levelup', DEAD: 'dead' };
+const STATES    = { START: 'start', PLAYING: 'playing', LEVELUP: 'levelup', DEAD: 'dead', SETTINGS: 'settings' };
 
 const SHIELD_ORBIT_R      = 50;   // px from player center
 const SHIELD_R            = 8;    // shield object radius
@@ -179,8 +179,18 @@ function cardRects() {
     ];
 }
 
+// ─── Settings ─────────────────────────────────────────────────────────────────
+const settings = { aimMode: 'auto', autoFireEnabled: false };
+function loadSettings() {
+    try { const s = JSON.parse(localStorage.getItem('zeroSettings')); if (s) Object.assign(settings, s); } catch(e) {}
+}
+function saveSettings() { localStorage.setItem('zeroSettings', JSON.stringify(settings)); }
+loadSettings();
+
 // ─── Game state ───────────────────────────────────────────────────────────────
 let state = STATES.START;
+let frameCount = 0;
+let menuEnemies = [];
 let player, bullets, enemies, score, lives, spawnTimer, spawnInterval;
 let camera = { x: 0, y: 0 };
 let xp, level, xpToNext, upgradeChoices;
@@ -204,6 +214,7 @@ function initGame() {
     spawnTimer = 0; spawnInterval = 120;
     xp = 0; level = 1; xpToNext = 60;
     upgradeChoices = [];
+    autoFire = settings.autoFireEnabled;
     paused = false;
     state = STATES.PLAYING;
     updateCamera();
@@ -228,13 +239,16 @@ let autoBtnTouch = null; // touch id on AUTO button
 
 canvas.addEventListener('touchstart', e => {
     e.preventDefault();
-    if (state === STATES.START || state === STATES.DEAD) { initGame(); return; }
-    if (state === STATES.LEVELUP) { handleUpgradeTap(e.changedTouches[0].clientX, e.changedTouches[0].clientY); return; }
+    const t0 = e.changedTouches[0];
+    if (state === STATES.START)    { handleStartTap(t0.clientX, t0.clientY); return; }
+    if (state === STATES.DEAD)     { handleDeadTap(t0.clientX, t0.clientY); return; }
+    if (state === STATES.SETTINGS) { handleSettingsTap(t0.clientX, t0.clientY); return; }
+    if (state === STATES.LEVELUP)  { handleUpgradeTap(t0.clientX, t0.clientY); return; }
     if (paused) return;
     for (const t of e.changedTouches) {
         const fb = FIRE_BTN();
         if (Math.hypot(t.clientX - fb.x, t.clientY - fb.y) < FIRE_R + 10) {
-            autoBtnTouch = t.identifier; // will toggle on touchend
+            autoBtnTouch = t.identifier;
         } else if (t.clientX > canvas.width / 2) {
             if (!aimJoy.active) Object.assign(aimJoy, { active: true, id: t.identifier, sx: t.clientX, sy: t.clientY, dx: 0, dy: 0 });
         } else if (!joy.active) {
@@ -271,8 +285,10 @@ canvas.addEventListener('touchend', e => {
 }, { passive: false });
 
 canvas.addEventListener('click', e => {
-    if (state === STATES.START || state === STATES.DEAD) { initGame(); return; }
-    if (state === STATES.LEVELUP) handleUpgradeTap(e.clientX, e.clientY);
+    if (state === STATES.START)    { handleStartTap(e.clientX, e.clientY); return; }
+    if (state === STATES.DEAD)     { handleDeadTap(e.clientX, e.clientY); return; }
+    if (state === STATES.SETTINGS) { handleSettingsTap(e.clientX, e.clientY); return; }
+    if (state === STATES.LEVELUP)  { handleUpgradeTap(e.clientX, e.clientY); return; }
 });
 
 const keys = {};
@@ -298,12 +314,73 @@ function handleUpgradeTap(cx, cy) {
     }
 }
 
+function handleStartTap(cx, cy) {
+    const gx = canvas.width - 42, gy = canvas.height - 42;
+    if (Math.hypot(cx - gx, cy - gy) < 26) { state = STATES.SETTINGS; return; }
+    initGame();
+}
+
+function deathBtnRects() {
+    const bw = 150, bh = 48, gap = 16;
+    const by = canvas.height / 2 + 70;
+    return [
+        { x: canvas.width / 2 - bw - gap / 2, y: by, w: bw, h: bh, action: 'play' },
+        { x: canvas.width / 2 + gap / 2,       y: by, w: bw, h: bh, action: 'menu' },
+    ];
+}
+
+function handleDeadTap(cx, cy) {
+    for (const b of deathBtnRects()) {
+        if (cx >= b.x && cx <= b.x + b.w && cy >= b.y && cy <= b.y + b.h) {
+            if (b.action === 'play') initGame();
+            else { state = STATES.START; initMenuEnemies(); }
+            return;
+        }
+    }
+}
+
+function settingsLayout() {
+    const panelW = Math.min(320, canvas.width - 48);
+    const panelH = 300;
+    return { panelX: (canvas.width - panelW) / 2, panelY: (canvas.height - panelH) / 2, panelW, panelH };
+}
+
+function handleSettingsTap(cx, cy) {
+    const { panelX, panelY, panelW, panelH } = settingsLayout();
+    const bw = 90, bh = 34, tx = panelX + panelW - bw - 16;
+    // AIMING toggle
+    if (cx >= tx && cx <= tx + bw && cy >= panelY + 80 && cy <= panelY + 80 + bh) {
+        settings.aimMode = settings.aimMode === 'auto' ? 'manual' : 'auto';
+        saveSettings(); return;
+    }
+    // AUTO FIRE toggle
+    if (cx >= tx && cx <= tx + bw && cy >= panelY + 140 && cy <= panelY + 140 + bh) {
+        settings.autoFireEnabled = !settings.autoFireEnabled;
+        saveSettings(); return;
+    }
+    // BACK button
+    const backW = 120, backH = 36, backX = (canvas.width - backW) / 2, backY = panelY + panelH - 55;
+    if (cx >= backX && cx <= backX + backW && cy >= backY && cy <= backY + backH) {
+        state = STATES.START;
+    }
+}
+
 // ─── Enemy types ──────────────────────────────────────────────────────────────
 const ENEMY_TYPES = {
     normal: { radius: 14, speed: () => 0.9 + Math.random() * 1.35, hp: 3,  xpVal: 10, color: '#ff3333', glow: '#f00' },
     fast:   { radius: 9,  speed: () => 2.8 + Math.random() * 1.2,  hp: 1,  xpVal: 15, color: '#ff8800', glow: '#f80' },
     tank:   { radius: 22, speed: () => 0.45 + Math.random() * 0.3, hp: 18, xpVal: 40, color: '#9933cc', glow: '#a0f' },
 };
+
+function initMenuEnemies() {
+    menuEnemies = ['normal','normal','fast','fast','tank','tank'].map(type => ({
+        x: 60 + Math.random() * (canvas.width - 120),
+        y: 60 + Math.random() * (canvas.height - 120),
+        type, radius: ENEMY_TYPES[type].radius,
+        vx: (Math.random() - 0.5) * 1.4,
+        vy: (Math.random() - 0.5) * 1.4,
+    }));
+}
 
 function spawnEnemy(type) {
     if (!type) {
@@ -368,16 +445,17 @@ function update() {
         const d = Math.hypot(e.x - player.x, e.y - player.y);
         if (d < bestDist) { bestDist = d; best = e; }
     }
-    // Aim: right joystick overrides auto-aim when moved enough
+    // Aim & shoot
     const aimLen = Math.hypot(aimJoy.dx, aimJoy.dy);
-    if (aimJoy.active && aimLen > 15) {
-        player.angle = Math.atan2(aimJoy.dy, aimJoy.dx);
-    } else if (best) {
-        player.angle = Math.atan2(best.y - player.y, best.x - player.x);
+    if (settings.aimMode === 'manual') {
+        if (mlen > 0) player.angle = Math.atan2(my, mx);
+    } else {
+        if (aimJoy.active && aimLen > 15) player.angle = Math.atan2(aimJoy.dy, aimJoy.dx);
+        else if (best) player.angle = Math.atan2(best.y - player.y, best.x - player.x);
     }
-
-    // Shoot & timers
-    if (keys[' '] || keys['z'] || autoFire || (aimJoy.active && aimLen > 15)) shoot();
+    const manualFire = settings.aimMode === 'manual' && mlen > 0;
+    const autoFiring = settings.aimMode !== 'manual' && (autoFire || (aimJoy.active && aimLen > 15));
+    if (keys[' '] || keys['z'] || manualFire || autoFiring) shoot();
     if (player.shootCooldown > 0) player.shootCooldown--;
     if (player.invincible > 0)    player.invincible--;
     player.shieldAngle += SHIELD_SPEED;
@@ -532,6 +610,27 @@ function dimScreen(alpha = 0.72) {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 }
 
+function drawMenuEnemies() {
+    ctx.globalAlpha = 0.3;
+    for (const e of menuEnemies) {
+        const et = ENEMY_TYPES[e.type];
+        ctx.beginPath(); ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
+        ctx.fillStyle = et.color; ctx.shadowBlur = 8; ctx.shadowColor = et.glow;
+        ctx.fill(); ctx.shadowBlur = 0;
+    }
+    ctx.globalAlpha = 1;
+}
+
+function drawPlayerPreview() {
+    ctx.globalAlpha = 0.4;
+    ctx.beginPath(); ctx.arc(canvas.width / 2, canvas.height / 2, 18, 0, Math.PI * 2);
+    ctx.fillStyle = '#4fc3f7'; ctx.shadowBlur = 16; ctx.shadowColor = '#4fc3f7';
+    ctx.fill(); ctx.shadowBlur = 0;
+    ctx.fillStyle = '#81d4fa';
+    ctx.fillRect(canvas.width / 2 + 2, canvas.height / 2 - 5, 24, 10);
+    ctx.globalAlpha = 1;
+}
+
 // ─── Draw sections ────────────────────────────────────────────────────────────
 function drawWorld() {
     ctx.save();
@@ -660,15 +759,94 @@ function drawHUD() {
 }
 
 function drawStartScreen() {
+    // Background floor + ambient enemies
     ctx.save(); ctx.scale(dbg.zoom, dbg.zoom); drawFloor(); ctx.restore();
-    dimScreen(0.68);
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#4fc3f7'; ctx.font = 'bold 34px monospace';
-    ctx.fillText('TOP-DOWN SHOOTER', canvas.width / 2, canvas.height / 2 - 50);
-    ctx.fillStyle = '#aaa'; ctx.font = '19px monospace';
-    ctx.fillText('Tap to start', canvas.width / 2, canvas.height / 2 + 8);
-    ctx.fillStyle = '#555'; ctx.font = '14px monospace';
-    ctx.fillText('Move: WASD / joystick   Shoot: SPACE / FIRE', canvas.width / 2, canvas.height / 2 + 48);
+    drawMenuEnemies();
+    dimScreen(0.65);
+
+    // Player preview at center
+    drawPlayerPreview();
+
+    // ZERO logo at 32% height
+    const logoY = canvas.height * 0.32;
+    ctx.font = 'bold 80px monospace';
+    ctx.shadowBlur = 20; ctx.shadowColor = '#44aaff';
+    ctx.fillStyle = '#4fc3f7'; ctx.textAlign = 'left';
+    const fullW = ctx.measureText('ZERO').width;
+    const zerW  = ctx.measureText('ZER').width;
+    const oW    = ctx.measureText('O').width;
+    const logoX = canvas.width / 2 - fullW / 2;
+    ctx.fillText('ZER', logoX, logoY);
+    // Pulsing O
+    const pulse = 1 + 0.05 * Math.sin(frameCount * 0.05);
+    ctx.save();
+    ctx.translate(logoX + zerW + oW / 2, logoY - 28);
+    ctx.scale(pulse, pulse);
+    ctx.fillText('O', -oW / 2, 28);
+    ctx.restore();
+    ctx.shadowBlur = 0;
+
+    // TAP TO START button at 62% height — pulsing opacity
+    const btnPulse = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(frameCount * Math.PI * 2 / 90));
+    ctx.globalAlpha = btnPulse;
+    const bw = Math.min(260, canvas.width - 48), bh = 52;
+    const bx = (canvas.width - bw) / 2, by = canvas.height * 0.62 - bh / 2;
+    roundRect(bx, by, bw, bh, 10);
+    ctx.fillStyle = 'rgba(0,80,160,0.2)'; ctx.fill();
+    ctx.strokeStyle = '#44aaff'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = '#4fc3f7'; ctx.font = 'bold 18px monospace'; ctx.textAlign = 'center';
+    ctx.fillText('TAP TO START', canvas.width / 2, by + bh / 2 + 6);
+    ctx.globalAlpha = 1;
+
+    // Gear button — bottom-right
+    const gx = canvas.width - 42, gy = canvas.height - 42;
+    ctx.beginPath(); ctx.arc(gx, gy, 18, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(60,60,80,0.85)'; ctx.fill();
+    ctx.strokeStyle = '#555'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = '#aaa'; ctx.font = '17px monospace'; ctx.textAlign = 'center';
+    ctx.fillText('⚙', gx, gy + 6);
+}
+
+function drawSettingsScreen() {
+    ctx.save(); ctx.scale(dbg.zoom, dbg.zoom); drawFloor(); ctx.restore();
+    drawMenuEnemies();
+    dimScreen(0.82);
+
+    const { panelX, panelY, panelW, panelH } = settingsLayout();
+    roundRect(panelX, panelY, panelW, panelH, 12);
+    ctx.fillStyle = 'rgba(8,8,20,0.97)'; ctx.fill();
+    ctx.strokeStyle = '#444'; ctx.lineWidth = 1; ctx.stroke();
+
+    // Title
+    ctx.fillStyle = '#4fc3f7'; ctx.font = 'bold 20px monospace'; ctx.textAlign = 'center';
+    ctx.fillText('SETTINGS', canvas.width / 2, panelY + 36);
+    ctx.strokeStyle = '#333'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(panelX + 16, panelY + 50); ctx.lineTo(panelX + panelW - 16, panelY + 50); ctx.stroke();
+
+    // Toggles
+    const bw = 90, bh = 34, tx = panelX + panelW - bw - 16;
+    const toggles = [
+        { label: 'AIMING',    val: settings.aimMode === 'auto' ? 'AUTO' : 'MANUAL', active: settings.aimMode === 'auto',        y: panelY + 80  },
+        { label: 'AUTO FIRE', val: settings.autoFireEnabled ? 'ON' : 'OFF',          active: settings.autoFireEnabled,          y: panelY + 140 },
+    ];
+    for (const tog of toggles) {
+        ctx.fillStyle = '#ccc'; ctx.font = '14px monospace'; ctx.textAlign = 'left';
+        ctx.fillText(tog.label, panelX + 16, tog.y + bh / 2 + 5);
+        roundRect(tx, tog.y, bw, bh, 6);
+        ctx.fillStyle = tog.active ? '#44aaff' : 'rgba(0,0,0,0)'; ctx.fill();
+        ctx.strokeStyle = '#44aaff'; ctx.lineWidth = 2; ctx.stroke();
+        ctx.fillStyle = tog.active ? '#001020' : '#44aaff';
+        ctx.font = 'bold 13px monospace'; ctx.textAlign = 'center';
+        ctx.fillText(tog.val, tx + bw / 2, tog.y + bh / 2 + 5);
+    }
+
+    // Back button
+    const backW = 120, backH = 36, backX = (canvas.width - backW) / 2, backY = panelY + panelH - 55;
+    roundRect(backX, backY, backW, backH, 6);
+    ctx.fillStyle = 'rgba(60,60,80,0.8)'; ctx.fill();
+    ctx.strokeStyle = '#555'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = '#aaa'; ctx.font = 'bold 13px monospace'; ctx.textAlign = 'center';
+    ctx.fillText('← BACK', canvas.width / 2, backY + backH / 2 + 5);
 }
 
 function drawLevelUpOverlay() {
@@ -699,14 +877,26 @@ function drawGameOverOverlay() {
     ctx.fillText('Score: ' + score, canvas.width / 2, canvas.height / 2 + 8);
     ctx.fillStyle = '#aaa'; ctx.font = '18px monospace';
     ctx.fillText('Reached level ' + level, canvas.width / 2, canvas.height / 2 + 38);
-    ctx.fillText('Tap to restart',         canvas.width / 2, canvas.height / 2 + 68);
+    // Two buttons
+    const btns = deathBtnRects();
+    const labels = ['PLAY AGAIN', 'MAIN MENU'];
+    for (let i = 0; i < btns.length; i++) {
+        const b = btns[i];
+        roundRect(b.x, b.y, b.w, b.h, 8);
+        ctx.fillStyle = i === 0 ? 'rgba(0,80,160,0.4)' : 'rgba(60,20,20,0.4)'; ctx.fill();
+        ctx.strokeStyle = i === 0 ? '#44aaff' : '#ff4444'; ctx.lineWidth = 2; ctx.stroke();
+        ctx.fillStyle = i === 0 ? '#4fc3f7' : '#ff6666';
+        ctx.font = 'bold 14px monospace'; ctx.textAlign = 'center';
+        ctx.fillText(labels[i], b.x + b.w / 2, b.y + b.h / 2 + 5);
+    }
 }
 
 // ─── Main draw ────────────────────────────────────────────────────────────────
 function draw() {
     ctx.fillStyle = '#0a0a0f';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    if (state === STATES.START) { drawStartScreen(); return; }
+    if (state === STATES.START)    { drawStartScreen(); return; }
+    if (state === STATES.SETTINGS) { drawSettingsScreen(); return; }
     drawWorld();
     drawHUD();
     if (state === STATES.LEVELUP) drawLevelUpOverlay();
@@ -715,11 +905,21 @@ function draw() {
 
 // ─── Loop ─────────────────────────────────────────────────────────────────────
 const enemyCountEl = document.getElementById('enemy-count');
+function updateMenuEnemies() {
+    for (const e of menuEnemies) {
+        e.x += e.vx; e.y += e.vy;
+        if (e.x < e.radius || e.x > canvas.width - e.radius)  { e.vx *= -1; e.x = clamp(e.x, e.radius, canvas.width - e.radius); }
+        if (e.y < e.radius || e.y > canvas.height - e.radius) { e.vy *= -1; e.y = clamp(e.y, e.radius, canvas.height - e.radius); }
+    }
+}
 function loop() {
+    frameCount++;
+    if (state === STATES.START || state === STATES.SETTINGS) updateMenuEnemies();
     update(); draw();
     if (debugPanel.style.display !== 'none') enemyCountEl.textContent = enemies ? enemies.length : 0;
     requestAnimationFrame(loop);
 }
+initMenuEnemies();
 loop();
 </script>
 </body>
