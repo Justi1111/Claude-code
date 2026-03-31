@@ -246,10 +246,7 @@ canvas.addEventListener('touchstart', e => {
     if (state === STATES.LEVELUP)  { handleUpgradeTap(t0.clientX, t0.clientY); return; }
     if (paused) return;
     for (const t of e.changedTouches) {
-        const fb = FIRE_BTN();
-        if (Math.hypot(t.clientX - fb.x, t.clientY - fb.y) < FIRE_R + 10) {
-            autoBtnTouch = t.identifier;
-        } else if (t.clientX > canvas.width / 2) {
+        if (t.clientX > canvas.width / 2) {
             if (!aimJoy.active) Object.assign(aimJoy, { active: true, id: t.identifier, sx: t.clientX, sy: t.clientY, dx: 0, dy: 0 });
         } else if (!joy.active) {
             Object.assign(joy, { active: true, id: t.identifier, sx: t.clientX, sy: t.clientY, dx: 0, dy: 0 });
@@ -279,8 +276,7 @@ canvas.addEventListener('touchend', e => {
     e.preventDefault();
     for (const t of e.changedTouches) {
         if (t.identifier === joy.id)       { joy.active = false; joy.dx = 0; joy.dy = 0; }
-        if (t.identifier === aimJoy.id)    { aimJoy.active = false; aimJoy.dx = 0; aimJoy.dy = 0; }
-        if (t.identifier === autoBtnTouch) { autoBtnTouch = null; autoFire = !autoFire; }
+        if (t.identifier === aimJoy.id) { aimJoy.active = false; aimJoy.dx = 0; aimJoy.dy = 0; }
     }
 }, { passive: false });
 
@@ -741,21 +737,15 @@ function drawHUD() {
     ctx.beginPath(); ctx.arc(jb.x + joy.dx, jb.y + joy.dy, 24, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.fill();
 
-    // Aim joystick (right)
-    const ajb = aimJoy.active ? { x: aimJoy.sx, y: aimJoy.sy } : { x: canvas.width - 80, y: canvas.height - 80 };
-    ctx.beginPath(); ctx.arc(ajb.x, ajb.y, JOY_R, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(255,200,0,0.2)'; ctx.lineWidth = 2; ctx.stroke();
-    ctx.fillStyle = 'rgba(255,200,0,0.04)'; ctx.fill();
-    ctx.beginPath(); ctx.arc(ajb.x + aimJoy.dx, ajb.y + aimJoy.dy, 24, 0, Math.PI * 2);
-    ctx.fillStyle = aimJoy.active ? 'rgba(255,200,0,0.35)' : 'rgba(255,200,0,0.1)'; ctx.fill();
-
-    // AUTO toggle button
-    const fb = FIRE_BTN();
-    ctx.beginPath(); ctx.arc(fb.x, fb.y, FIRE_R, 0, Math.PI * 2);
-    ctx.fillStyle   = autoFire ? 'rgba(255,200,0,0.45)' : 'rgba(80,80,80,0.2)'; ctx.fill();
-    ctx.strokeStyle = autoFire ? 'rgba(255,200,0,0.9)'  : 'rgba(255,200,0,0.3)'; ctx.lineWidth = 2; ctx.stroke();
-    ctx.fillStyle = autoFire ? '#ffe066' : '#666'; ctx.font = 'bold 12px monospace'; ctx.textAlign = 'center';
-    ctx.fillText('AUTO', fb.x, fb.y + 4);
+    // Aim joystick (right) — only in AUTO aiming mode
+    if (settings.aimMode !== 'manual') {
+        const ajb = aimJoy.active ? { x: aimJoy.sx, y: aimJoy.sy } : { x: canvas.width - 80, y: canvas.height - 80 };
+        ctx.beginPath(); ctx.arc(ajb.x, ajb.y, JOY_R, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(255,200,0,0.2)'; ctx.lineWidth = 2; ctx.stroke();
+        ctx.fillStyle = 'rgba(255,200,0,0.04)'; ctx.fill();
+        ctx.beginPath(); ctx.arc(ajb.x + aimJoy.dx, ajb.y + aimJoy.dy, 24, 0, Math.PI * 2);
+        ctx.fillStyle = aimJoy.active ? 'rgba(255,200,0,0.35)' : 'rgba(255,200,0,0.1)'; ctx.fill();
+    }
 }
 
 function drawStartScreen() {
