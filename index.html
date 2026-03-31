@@ -415,9 +415,9 @@ function update() {
             b.hitEnemies.add(e);
             e.hp -= player.damage;
             e.hitFlash = 8;
+            if (e.hp <= 0) dead.add(e);
             if (b.pierceLeft <= 0) { b.life = 0; break; }
             else b.pierceLeft--;
-            if (e.hp <= 0) dead.add(e);
         }
     }
 
