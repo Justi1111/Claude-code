@@ -222,7 +222,9 @@ const FIRE_R = 45;
 const FIRE_BTN = () => ({ x: canvas.width - 90, y: canvas.height - 90 });
 
 let joy     = { active: false, id: null, sx: 0, sy: 0, dx: 0, dy: 0 };
-let fireBtn = { active: false, id: null };
+let aimJoy  = { active: false, id: null, sx: 0, sy: 0, dx: 0, dy: 0 };
+let autoFire = false;
+let autoBtnTouch = null; // touch id on AUTO button
 
 canvas.addEventListener('touchstart', e => {
     e.preventDefault();
@@ -231,8 +233,10 @@ canvas.addEventListener('touchstart', e => {
     if (paused) return;
     for (const t of e.changedTouches) {
         const fb = FIRE_BTN();
-        if (Math.hypot(t.clientX - fb.x, t.clientY - fb.y) < FIRE_R + 30) {
-            fireBtn.active = true; fireBtn.id = t.identifier;
+        if (Math.hypot(t.clientX - fb.x, t.clientY - fb.y) < FIRE_R + 10) {
+            autoBtnTouch = t.identifier; // will toggle on touchend
+        } else if (t.clientX > canvas.width / 2) {
+            if (!aimJoy.active) Object.assign(aimJoy, { active: true, id: t.identifier, sx: t.clientX, sy: t.clientY, dx: 0, dy: 0 });
         } else if (!joy.active) {
             Object.assign(joy, { active: true, id: t.identifier, sx: t.clientX, sy: t.clientY, dx: 0, dy: 0 });
         }
@@ -242,19 +246,27 @@ canvas.addEventListener('touchstart', e => {
 canvas.addEventListener('touchmove', e => {
     e.preventDefault();
     for (const t of e.changedTouches) {
-        if (t.identifier !== joy.id) continue;
-        joy.dx = t.clientX - joy.sx;
-        joy.dy = t.clientY - joy.sy;
-        const len = Math.hypot(joy.dx, joy.dy);
-        if (len > JOY_R) { joy.dx = joy.dx / len * JOY_R; joy.dy = joy.dy / len * JOY_R; }
+        if (t.identifier === joy.id) {
+            joy.dx = t.clientX - joy.sx;
+            joy.dy = t.clientY - joy.sy;
+            const len = Math.hypot(joy.dx, joy.dy);
+            if (len > JOY_R) { joy.dx = joy.dx / len * JOY_R; joy.dy = joy.dy / len * JOY_R; }
+        }
+        if (t.identifier === aimJoy.id) {
+            aimJoy.dx = t.clientX - aimJoy.sx;
+            aimJoy.dy = t.clientY - aimJoy.sy;
+            const len = Math.hypot(aimJoy.dx, aimJoy.dy);
+            if (len > JOY_R) { aimJoy.dx = aimJoy.dx / len * JOY_R; aimJoy.dy = aimJoy.dy / len * JOY_R; }
+        }
     }
 }, { passive: false });
 
 canvas.addEventListener('touchend', e => {
     e.preventDefault();
     for (const t of e.changedTouches) {
-        if (t.identifier === joy.id)     { joy.active = false; joy.dx = 0; joy.dy = 0; }
-        if (t.identifier === fireBtn.id) { fireBtn.active = false; }
+        if (t.identifier === joy.id)       { joy.active = false; joy.dx = 0; joy.dy = 0; }
+        if (t.identifier === aimJoy.id)    { aimJoy.active = false; aimJoy.dx = 0; aimJoy.dy = 0; }
+        if (t.identifier === autoBtnTouch) { autoBtnTouch = null; autoFire = !autoFire; }
     }
 }, { passive: false });
 
@@ -356,10 +368,16 @@ function update() {
         const d = Math.hypot(e.x - player.x, e.y - player.y);
         if (d < bestDist) { bestDist = d; best = e; }
     }
-    if (best) player.angle = Math.atan2(best.y - player.y, best.x - player.x);
+    // Aim: right joystick overrides auto-aim when moved enough
+    const aimLen = Math.hypot(aimJoy.dx, aimJoy.dy);
+    if (aimJoy.active && aimLen > 15) {
+        player.angle = Math.atan2(aimJoy.dy, aimJoy.dx);
+    } else if (best) {
+        player.angle = Math.atan2(best.y - player.y, best.x - player.x);
+    }
 
     // Shoot & timers
-    if (keys[' '] || keys['z'] || fireBtn.active) shoot();
+    if (keys[' '] || keys['z'] || autoFire || (aimJoy.active && aimLen > 15)) shoot();
     if (player.shootCooldown > 0) player.shootCooldown--;
     if (player.invincible > 0)    player.invincible--;
     player.shieldAngle += SHIELD_SPEED;
@@ -616,7 +634,7 @@ function drawHUD() {
     ctx.fillStyle = '#bbb'; ctx.font = '11px monospace'; ctx.textAlign = 'center';
     ctx.fillText(`LVL ${level}  ${xp} / ${xpToNext} XP`, canvas.width / 2, by - 4);
 
-    // Joystick
+    // Move joystick (left)
     const jb = joy.active ? { x: joy.sx, y: joy.sy } : { x: 80, y: canvas.height - 80 };
     ctx.beginPath(); ctx.arc(jb.x, jb.y, JOY_R, 0, Math.PI * 2);
     ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 2; ctx.stroke();
@@ -624,13 +642,21 @@ function drawHUD() {
     ctx.beginPath(); ctx.arc(jb.x + joy.dx, jb.y + joy.dy, 24, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.fill();
 
-    // Fire button
+    // Aim joystick (right)
+    const ajb = aimJoy.active ? { x: aimJoy.sx, y: aimJoy.sy } : { x: canvas.width - 80, y: canvas.height - 80 };
+    ctx.beginPath(); ctx.arc(ajb.x, ajb.y, JOY_R, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255,200,0,0.2)'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = 'rgba(255,200,0,0.04)'; ctx.fill();
+    ctx.beginPath(); ctx.arc(ajb.x + aimJoy.dx, ajb.y + aimJoy.dy, 24, 0, Math.PI * 2);
+    ctx.fillStyle = aimJoy.active ? 'rgba(255,200,0,0.35)' : 'rgba(255,200,0,0.1)'; ctx.fill();
+
+    // AUTO toggle button
     const fb = FIRE_BTN();
     ctx.beginPath(); ctx.arc(fb.x, fb.y, FIRE_R, 0, Math.PI * 2);
-    ctx.fillStyle   = fireBtn.active ? 'rgba(255,200,0,0.5)' : 'rgba(255,200,0,0.15)'; ctx.fill();
-    ctx.strokeStyle = 'rgba(255,200,0,0.65)'; ctx.lineWidth = 2; ctx.stroke();
-    ctx.fillStyle = '#ffe066'; ctx.font = 'bold 14px monospace'; ctx.textAlign = 'center';
-    ctx.fillText('FIRE', fb.x, fb.y + 5);
+    ctx.fillStyle   = autoFire ? 'rgba(255,200,0,0.45)' : 'rgba(80,80,80,0.2)'; ctx.fill();
+    ctx.strokeStyle = autoFire ? 'rgba(255,200,0,0.9)'  : 'rgba(255,200,0,0.3)'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = autoFire ? '#ffe066' : '#666'; ctx.font = 'bold 12px monospace'; ctx.textAlign = 'center';
+    ctx.fillText('AUTO', fb.x, fb.y + 4);
 }
 
 function drawStartScreen() {
