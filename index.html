@@ -629,7 +629,7 @@ function drawEyePlayer(x, y, angle, showBarrel, baseColor) {
     const R = 18;
     // Sclera
     ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2);
-    ctx.fillStyle = '#ffffff'; ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.95)'; ctx.fill();
     ctx.strokeStyle = baseColor; ctx.lineWidth = 2;
     ctx.shadowBlur = 16; ctx.shadowColor = baseColor;
     ctx.stroke(); ctx.shadowBlur = 0;
