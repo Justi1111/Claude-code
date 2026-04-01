@@ -118,7 +118,7 @@ function drawWorld() {
             const bw = e.radius * 2.2, bh = 4;
             const bx = e.x - bw/2, by = e.y + e.radius + 4;
             ctx.fillStyle = '#333'; ctx.fillRect(bx, by, bw, bh);
-            ctx.fillStyle = '#a855f7'; ctx.fillRect(bx, by, bw * Math.max(0, e.hp / ENEMY_TYPES.tank.hp), bh);
+            ctx.fillStyle = '#a855f7'; ctx.fillRect(bx, by, bw * Math.max(0, e.hp / advancedSettings.tankHp), bh);
         }
         if (e.hitFlash > 0) {
             ctx.globalAlpha = (e.hitFlash / 8) * 0.75;
@@ -129,10 +129,11 @@ function drawWorld() {
     }
 
     // Shields
+    const shieldOrbitR = advancedSettings.shieldOrbitR;
     for (let i = 0; i < player.shields; i++) {
         const ang = player.shieldAngle + (i / player.shields) * Math.PI * 2;
-        const sx  = player.x + Math.cos(ang) * SHIELD_ORBIT_R;
-        const sy  = player.y + Math.sin(ang) * SHIELD_ORBIT_R;
+        const sx  = player.x + Math.cos(ang) * shieldOrbitR;
+        const sy  = player.y + Math.sin(ang) * shieldOrbitR;
         ctx.beginPath(); ctx.arc(sx, sy, SHIELD_R, 0, Math.PI * 2);
         ctx.fillStyle = '#44aaff'; ctx.shadowBlur = 12; ctx.shadowColor = '#4af';
         ctx.fill(); ctx.shadowBlur = 0;
@@ -245,16 +246,18 @@ function drawSettingsScreen() {
     drawMenuEnemies();
     dimScreen(0.82);
 
-    const { panelX, panelY, panelW, panelH } = settingsLayout();
+    const { panelX, panelY, panelW, panelH, scrollTop, scrollBottom } = settingsLayout();
     roundRect(panelX, panelY, panelW, panelH, 12);
     ctx.fillStyle = 'rgba(8,8,20,0.97)'; ctx.fill();
     ctx.strokeStyle = '#444'; ctx.lineWidth = 1; ctx.stroke();
 
+    // Title
     ctx.fillStyle = '#4fc3f7'; ctx.font = 'bold 20px monospace'; ctx.textAlign = 'center';
     ctx.fillText('SETTINGS', canvas.width / 2, panelY + 36);
     ctx.strokeStyle = '#333'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(panelX + 16, panelY + 50); ctx.lineTo(panelX + panelW - 16, panelY + 50); ctx.stroke();
 
+    // Basic toggles (fixed)
     const bw = 90, bh = 34, tx = panelX + panelW - bw - 16;
     const toggles = [
         { label: 'AIMING',    val: settings.aimMode === 'auto' ? 'AUTO' : 'MANUAL', active: settings.aimMode === 'auto',  y: panelY + 80  },
@@ -271,7 +274,75 @@ function drawSettingsScreen() {
         ctx.fillText(tog.val, tx + bw / 2, tog.y + bh / 2 + 5);
     }
 
-    const backW = 120, backH = 36, backX = (canvas.width - backW) / 2, backY = panelY + panelH - 55;
+    // Divider + label before scrollable section
+    const divY = panelY + scrollTop - 10;
+    ctx.strokeStyle = '#222'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(panelX + 16, divY); ctx.lineTo(panelX + panelW - 16, divY); ctx.stroke();
+    ctx.fillStyle = '#446'; ctx.font = 'bold 10px monospace'; ctx.textAlign = 'center';
+    ctx.fillText('ADVANCED  ▼', canvas.width / 2, divY - 2);
+
+    // Scrollable area
+    const scrAbsTop = panelY + scrollTop, visH = scrollBottom - scrollTop;
+    const totalAdvH = ADV_ROWS.reduce((s, r) => s + (r.section ? 30 : 38), 0);
+    const maxScroll = Math.max(0, totalAdvH - visH);
+
+    ctx.save();
+    ctx.beginPath(); ctx.rect(panelX + 2, scrAbsTop, panelW - 4, visH); ctx.clip();
+
+    let rowY = scrAbsTop - settingsScrollY;
+    for (const row of ADV_ROWS) {
+        const rh = row.section ? 30 : 38;
+        if (row.section) {
+            ctx.fillStyle = '#557799'; ctx.font = 'bold 10px monospace'; ctx.textAlign = 'left';
+            ctx.fillText('── ' + row.section, panelX + 12, rowY + 20);
+        } else {
+            const val = advancedSettings[row.key];
+            const btnW = 28, btnH = 26, btnY = rowY + 6;
+            const plusX = panelX + panelW - 8 - btnW, minusX = plusX - 4 - btnW;
+            ctx.fillStyle = '#bbb'; ctx.font = '12px monospace'; ctx.textAlign = 'left';
+            ctx.fillText(row.label, panelX + 12, rowY + rh / 2 + 5);
+            const dispVal = Number.isInteger(val) ? val : val.toFixed(2);
+            ctx.fillStyle = '#fff'; ctx.font = 'bold 12px monospace'; ctx.textAlign = 'center';
+            ctx.fillText(dispVal, minusX - 16, rowY + rh / 2 + 5);
+            // [ - ]
+            roundRect(minusX, btnY, btnW, btnH, 4);
+            ctx.fillStyle = val <= row.min ? '#0d0d1a' : 'rgba(40,40,70,0.9)'; ctx.fill();
+            ctx.strokeStyle = val <= row.min ? '#222' : '#446'; ctx.lineWidth = 1; ctx.stroke();
+            ctx.fillStyle = val <= row.min ? '#333' : '#aaa';
+            ctx.font = 'bold 15px monospace'; ctx.textAlign = 'center';
+            ctx.fillText('−', minusX + btnW / 2, btnY + btnH / 2 + 6);
+            // [ + ]
+            roundRect(plusX, btnY, btnW, btnH, 4);
+            ctx.fillStyle = val >= row.max ? '#0d0d1a' : 'rgba(40,40,70,0.9)'; ctx.fill();
+            ctx.strokeStyle = val >= row.max ? '#222' : '#446'; ctx.lineWidth = 1; ctx.stroke();
+            ctx.fillStyle = val >= row.max ? '#333' : '#aaa';
+            ctx.fillText('+', plusX + btnW / 2, btnY + btnH / 2 + 6);
+        }
+        rowY += rh;
+    }
+    ctx.restore();
+
+    // Scroll indicator
+    if (maxScroll > 0) {
+        const trackH = visH - 4;
+        const thumbH = Math.max(20, visH * visH / totalAdvH);
+        const thumbY = scrAbsTop + 2 + (settingsScrollY / maxScroll) * (trackH - thumbH);
+        ctx.fillStyle = 'rgba(80,80,120,0.35)';
+        ctx.fillRect(panelX + panelW - 6, scrAbsTop + 2, 4, trackH);
+        ctx.fillStyle = 'rgba(140,140,200,0.7)';
+        ctx.fillRect(panelX + panelW - 6, thumbY, 4, thumbH);
+    }
+
+    // RESET DEFAULTS button
+    const resetW = 140, resetH = 28, resetX = panelX + (panelW - resetW) / 2, resetY = panelY + panelH - 82;
+    roundRect(resetX, resetY, resetW, resetH, 5);
+    ctx.fillStyle = 'rgba(80,30,30,0.7)'; ctx.fill();
+    ctx.strokeStyle = '#844'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = '#f88'; ctx.font = 'bold 11px monospace'; ctx.textAlign = 'center';
+    ctx.fillText('RESET DEFAULTS', canvas.width / 2, resetY + resetH / 2 + 4);
+
+    // BACK button
+    const backW = 120, backH = 34, backX = panelX + (panelW - backW) / 2, backY = panelY + panelH - 46;
     roundRect(backX, backY, backW, backH, 6);
     ctx.fillStyle = 'rgba(60,60,80,0.8)'; ctx.fill();
     ctx.strokeStyle = '#555'; ctx.lineWidth = 1; ctx.stroke();
@@ -300,13 +371,62 @@ function drawLevelUpOverlay() {
 
 function drawGameOverOverlay() {
     dimScreen(0.75);
+    const midX = canvas.width / 2, midY = canvas.height / 2;
     ctx.textAlign = 'center';
     ctx.fillStyle = '#ff4444'; ctx.font = 'bold 44px monospace';
-    ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 48);
+    ctx.fillText('GAME OVER', midX, midY - 100);
     ctx.fillStyle = '#fff'; ctx.font = '26px monospace';
-    ctx.fillText('Score: ' + score, canvas.width / 2, canvas.height / 2 + 8);
+    ctx.fillText('Score: ' + score, midX, midY - 44);
     ctx.fillStyle = '#aaa'; ctx.font = '18px monospace';
-    ctx.fillText('Reached level ' + level, canvas.width / 2, canvas.height / 2 + 38);
+    ctx.fillText('Reached level ' + level, midX, midY - 16);
+
+    // Run history graph
+    const gw = 260, gh = 80, gx = midX - gw / 2, gy = midY + 4;
+    roundRect(gx, gy, gw, gh, 6);
+    ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fill();
+    ctx.fillStyle = '#666'; ctx.font = '10px monospace'; ctx.textAlign = 'left';
+    ctx.fillText('LAST RUNS', gx + 8, gy + 14);
+    if (runHistory.length < 2) {
+        ctx.fillStyle = '#555'; ctx.font = '11px monospace'; ctx.textAlign = 'center';
+        ctx.fillText('Play more to see progress', midX, gy + gh / 2 + 4);
+    } else {
+        const smoothed = runHistory.map((v, i) => {
+            const a = runHistory[i - 1] ?? v, b = v, c = runHistory[i + 1] ?? v;
+            return (a + b + c) / 3;
+        });
+        let mn = Math.min(...smoothed), mx = Math.max(...smoothed);
+        if (mn === mx) { mn -= 1; mx += 1; }
+        const pad = 12;
+        const pts = smoothed.map((v, i) => ({
+            x: gx + pad + i / (smoothed.length - 1) * (gw - 2 * pad),
+            y: gy + gh - pad - (v - mn) / (mx - mn) * (gh - 2 * pad),
+        }));
+        // Baseline
+        ctx.beginPath();
+        ctx.moveTo(gx + pad, gy + gh - pad); ctx.lineTo(gx + gw - pad, gy + gh - pad);
+        ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1; ctx.stroke();
+        // Fill
+        ctx.beginPath();
+        ctx.moveTo(pts[0].x, gy + gh - pad);
+        for (const p of pts) ctx.lineTo(p.x, p.y);
+        ctx.lineTo(pts[pts.length - 1].x, gy + gh - pad);
+        ctx.closePath(); ctx.fillStyle = 'rgba(68,170,255,0.08)'; ctx.fill();
+        // Line
+        ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+        ctx.strokeStyle = '#44aaff'; ctx.lineWidth = 1.5; ctx.lineJoin = 'round'; ctx.stroke();
+        // Dots
+        for (let i = 0; i < pts.length - 1; i++) {
+            ctx.beginPath(); ctx.arc(pts[i].x, pts[i].y, 3, 0, Math.PI * 2);
+            ctx.fillStyle = '#44aaff'; ctx.shadowBlur = 0; ctx.fill();
+        }
+        // Current run dot
+        const last = pts[pts.length - 1];
+        ctx.shadowBlur = 6; ctx.shadowColor = '#44aaff';
+        ctx.beginPath(); ctx.arc(last.x, last.y, 4, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff'; ctx.fill(); ctx.shadowBlur = 0;
+    }
+
     const btns = deathBtnRects();
     const labels = ['PLAY AGAIN', 'MAIN MENU'];
     for (let i = 0; i < btns.length; i++) {
