@@ -412,28 +412,59 @@ function update() {
         if (spawnInterval > 50) spawnInterval = Math.max(50, spawnInterval - 1);
     }
 
-    // Move enemies
+    // ── Screen culling ────────────────────────────────────────────────────────
+    const CULL_MARGIN = 250;
+    const onScreen = [], offScreen = [];
+    for (const e of enemies) {
+        if (e.x >= camera.x - CULL_MARGIN && e.x <= camera.x + vw + CULL_MARGIN &&
+            e.y >= camera.y - CULL_MARGIN && e.y <= camera.y + vh + CULL_MARGIN) {
+            onScreen.push(e);
+        } else {
+            offScreen.push(e);
+        }
+    }
+
+    // Move all enemies toward player
     for (const e of enemies) {
         const dx = player.x - e.x, dy = player.y - e.y;
         const len = Math.hypot(dx, dy);
         e.x += dx / len * e.speed;
         e.y += dy / len * e.speed;
+    }
+    // Cooldown timers — onScreen only
+    for (const e of onScreen) {
         if (e.hitFlash > 0)          e.hitFlash--;
         if (e.shieldHitCooldown > 0) e.shieldHitCooldown--;
     }
 
-    // Enemy separation
-    for (let i = 0; i < enemies.length; i++) {
-        for (let j = i + 1; j < enemies.length; j++) {
-            const a = enemies[i], b = enemies[j];
-            const dx = b.x - a.x, dy = b.y - a.y;
-            const dist = Math.hypot(dx, dy);
-            const minDist = a.radius + b.radius;
-            if (dist < minDist && dist > 0) {
-                const push = (minDist - dist) / 2;
-                const nx = dx / dist * push, ny = dy / dist * push;
-                a.x -= nx; a.y -= ny;
-                b.x += nx; b.y += ny;
+    // Enemy separation — spatial grid, onScreen only
+    const SEP_CELL = 64;
+    const sepGrid = new Map();
+    for (let i = 0; i < onScreen.length; i++) {
+        const e = onScreen[i];
+        e._idx = i;
+        const key = Math.floor(e.x / SEP_CELL) + ',' + Math.floor(e.y / SEP_CELL);
+        if (!sepGrid.has(key)) sepGrid.set(key, []);
+        sepGrid.get(key).push(e);
+    }
+    for (const e of onScreen) {
+        const cx = Math.floor(e.x / SEP_CELL), cy = Math.floor(e.y / SEP_CELL);
+        for (let ncx = cx - 1; ncx <= cx + 1; ncx++) {
+            for (let ncy = cy - 1; ncy <= cy + 1; ncy++) {
+                const cell = sepGrid.get(ncx + ',' + ncy);
+                if (!cell) continue;
+                for (const other of cell) {
+                    if (other._idx <= e._idx) continue;
+                    const dx = other.x - e.x, dy = other.y - e.y;
+                    const dist = Math.hypot(dx, dy);
+                    const minDist = e.radius + other.radius;
+                    if (dist < minDist && dist > 0) {
+                        const push = (minDist - dist) / 2;
+                        const nx = dx / dist * push, ny = dy / dist * push;
+                        e.x -= nx; e.y -= ny;
+                        other.x += nx; other.y += ny;
+                    }
+                }
             }
         }
     }
@@ -441,10 +472,10 @@ function update() {
     // Collision phase
     const dead = new Set();
 
-    // Bullet ↔ enemy
+    // Bullet ↔ enemy (onScreen only)
     for (const b of bullets) {
         if (b.life <= 0) continue;
-        for (const e of enemies) {
+        for (const e of onScreen) {
             if (dead.has(e) || b.hitEnemies.has(e)) continue;
             if (Math.hypot(b.x - e.x, b.y - e.y) >= b.radius + e.radius) continue;
             b.hitEnemies.add(e);
@@ -456,12 +487,12 @@ function update() {
         }
     }
 
-    // Shield ↔ enemy
+    // Shield ↔ enemy (onScreen only)
     for (let i = 0; i < player.shields; i++) {
         const ang = player.shieldAngle + (i / player.shields) * Math.PI * 2;
         const sx  = player.x + Math.cos(ang) * SHIELD_ORBIT_R;
         const sy  = player.y + Math.sin(ang) * SHIELD_ORBIT_R;
-        for (const e of enemies) {
+        for (const e of onScreen) {
             if (dead.has(e)) continue;
             const dist = Math.hypot(e.x - sx, e.y - sy);
             if (dist >= SHIELD_R + e.radius) continue;
@@ -490,7 +521,7 @@ function update() {
         if (xp >= xpToNext) { upgradeChoices = pickUpgrades(2); state = STATES.LEVELUP; }
     }
 
-    // Player ↔ enemy
+    // Player ↔ enemy (all enemies)
     if (!dbg.godMode && player.invincible === 0) {
         for (const e of enemies) {
             if (Math.hypot(player.x - e.x, player.y - e.y) >= player.radius + e.radius - 4) continue;
