@@ -43,8 +43,6 @@ document.getElementById('btn-killall').addEventListener('click', () => {
 });
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const WORLD_W   = 4000;
-const WORLD_H   = 4000;
 const TILE_SIZE = 64;
 const STATES    = { START: 'start', PLAYING: 'playing', LEVELUP: 'levelup', DEAD: 'dead', SETTINGS: 'settings' };
 
@@ -123,10 +121,11 @@ let menuEnemies = [];
 let player, bullets, enemies, score, lives, spawnTimer, spawnInterval;
 let camera = { x: 0, y: 0 };
 let xp, level, xpToNext, upgradeChoices;
+let pupilAngle = 0;
 
 function initGame() {
     player = {
-        x: WORLD_W / 2, y: WORLD_H / 2,
+        x: 0, y: 0,
         radius: 18, speed: 4, angle: 0,
         shootCooldown: 0, invincible: 0,
         fireRate:     48,
@@ -142,7 +141,7 @@ function initGame() {
     };
     bullets = []; enemies = [];
     score = 0; lives = 3;
-    spawnTimer = 0; spawnInterval = 120;
+    spawnTimer = 0; spawnInterval = 200;
     xp = 0; level = 1; xpToNext = 60;
     upgradeChoices = [];
     autoFire = settings.autoFireEnabled;
@@ -154,8 +153,8 @@ function initGame() {
 function updateCamera() {
     const vw = canvas.width / dbg.zoom;
     const vh = canvas.height / dbg.zoom;
-    camera.x = clamp(player.x - vw / 2, 0, WORLD_W - vw);
-    camera.y = clamp(player.y - vh / 2, 0, WORLD_H - vh);
+    camera.x = player.x - vw / 2;
+    camera.y = player.y - vh / 2;
 }
 
 // ─── Input ────────────────────────────────────────────────────────────────────
@@ -318,8 +317,8 @@ function spawnEnemy(type) {
     const ang = Math.random() * Math.PI * 2;
     const dist = Math.max(canvas.width, canvas.height) / dbg.zoom * 0.6;
     enemies.push({
-        x: clamp(player.x + Math.cos(ang) * dist, 20, WORLD_W - 20),
-        y: clamp(player.y + Math.sin(ang) * dist, 20, WORLD_H - 20),
+        x: player.x + Math.cos(ang) * dist,
+        y: player.y + Math.sin(ang) * dist,
         type, radius: t.radius, speed: t.speed(), hp: t.hp, xpVal: t.xpVal,
         hitFlash: 0, shieldHitCooldown: 0,
     });
@@ -361,8 +360,8 @@ function update() {
     const mlen = Math.hypot(mx, my);
     if (mlen > 0) {
         const effectiveSpeed = player.speed * (1 + player.darkHearts * 0.05 + (player.darkHearts === 3 ? 0.05 : 0));
-        player.x = clamp(player.x + mx / mlen * effectiveSpeed, player.radius, WORLD_W - player.radius);
-        player.y = clamp(player.y + my / mlen * effectiveSpeed, player.radius, WORLD_H - player.radius);
+        player.x += mx / mlen * effectiveSpeed;
+        player.y += my / mlen * effectiveSpeed;
     }
     updateCamera();
 
@@ -374,6 +373,15 @@ function update() {
         if (e.y < camera.y - 30 || e.y > camera.y + vh + 30) continue;
         const d = Math.hypot(e.x - player.x, e.y - player.y);
         if (d < bestDist) { bestDist = d; best = e; }
+    }
+
+    // Smooth pupil tracking toward nearest enemy
+    if (best) {
+        const targetAngle = Math.atan2(best.y - player.y, best.x - player.x);
+        let diff = targetAngle - pupilAngle;
+        while (diff >  Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        pupilAngle += diff * 0.08;
     }
 
     // Aim & shoot
@@ -399,9 +407,9 @@ function update() {
     spawnTimer++;
     if (spawnTimer >= spawnInterval) {
         spawnTimer = 0;
-        const count = 2 + Math.floor(level / 2) + (score > 20 ? 2 : 0);
+        const count = 2 + Math.floor(level / 4);
         for (let i = 0; i < count; i++) spawnEnemy();
-        if (spawnInterval > 30) spawnInterval = Math.max(30, spawnInterval - 2);
+        if (spawnInterval > 50) spawnInterval = Math.max(50, spawnInterval - 1);
     }
 
     // Move enemies

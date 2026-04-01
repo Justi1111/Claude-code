@@ -60,20 +60,23 @@ function drawPlayerPreview() {
 
 function drawEyePlayer(x, y, angle, showBarrel, baseColor) {
     const R = 18;
+    // Glow ring
     ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2);
     ctx.shadowBlur = 14; ctx.shadowColor = baseColor;
     ctx.strokeStyle = baseColor; ctx.lineWidth = 1.5; ctx.stroke();
     ctx.shadowBlur = 0;
+    // White sclera
     ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2);
     ctx.fillStyle = '#ffffff'; ctx.fill();
-    ctx.beginPath(); ctx.arc(x, y, 10, 0, Math.PI * 2);
-    ctx.fillStyle = baseColor; ctx.fill();
-    const px = x + Math.cos(angle) * 3;
-    const py = y + Math.sin(angle) * 3;
-    ctx.beginPath(); ctx.arc(px, py, 5.5, 0, Math.PI * 2);
+    // Pupil — smooth, tracks nearest enemy via pupilAngle (independent of aim)
+    const px = x + Math.cos(pupilAngle) * 4;
+    const py = y + Math.sin(pupilAngle) * 4;
+    ctx.beginPath(); ctx.arc(px, py, 6, 0, Math.PI * 2);
     ctx.fillStyle = '#050510'; ctx.fill();
+    // Highlight
     ctx.beginPath(); ctx.arc(px + 2, py - 2, 1.8, 0, Math.PI * 2);
     ctx.fillStyle = '#ffffff'; ctx.fill();
+    // Barrel (direction = aim angle)
     if (showBarrel) {
         const bx = x + Math.cos(angle) * R;
         const by = y + Math.sin(angle) * R;
