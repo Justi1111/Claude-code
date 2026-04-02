@@ -55,6 +55,7 @@ const SHIELD_HIT_COOLDOWN = 30;
 // ─── Advanced Settings ────────────────────────────────────────────────────────
 const ADV_DEFAULTS = {
     waveInterval: 200, minInterval: 50, intervalDecay: 1, waveBaseSize: 2,
+    spawnCountMult: 1.0, levelScaleDiv: 4, maxEnemies: 200,
     fastFromLevel: 5, tankFromLevel: 10, fastMaxChance: 0.35, tankMaxChance: 0.15,
     normalHp: 3, normalSpdMin: 0.9, normalSpdMax: 2.25, normalXp: 10,
     fastHp: 1, fastSpdMin: 2.8, fastSpdMax: 4.0, fastXp: 15,
@@ -68,51 +69,54 @@ const ADV_DEFAULTS = {
 };
 const ADV_ROWS = [
     { section: 'SPAWN' },
-    { key: 'waveInterval',   label: 'Wave Interval',    min: 50,   max: 300,  step: 10   },
-    { key: 'minInterval',    label: 'Min Interval',     min: 20,   max: 100,  step: 5    },
-    { key: 'intervalDecay',  label: 'Interval Decay',   min: 1,    max: 5,    step: 1    },
-    { key: 'waveBaseSize',   label: 'Wave Base Size',   min: 1,    max: 8,    step: 1    },
-    { key: 'fastFromLevel',  label: 'Fast From Level',  min: 1,    max: 20,   step: 1    },
-    { key: 'tankFromLevel',  label: 'Tank From Level',  min: 1,    max: 20,   step: 1    },
-    { key: 'fastMaxChance',  label: 'Fast Max Chance',  min: 0.05, max: 0.6,  step: 0.05 },
-    { key: 'tankMaxChance',  label: 'Tank Max Chance',  min: 0.05, max: 0.3,  step: 0.05 },
+    { key: 'waveInterval',   label: 'Wave Interval',    min: 10,   max: 9999, step: 10   },
+    { key: 'minInterval',    label: 'Min Interval',     min: 1,    max: 9999, step: 5    },
+    { key: 'intervalDecay',  label: 'Interval Decay',   min: 0,    max: 9999, step: 1    },
+    { key: 'waveBaseSize',   label: 'Wave Base Size',   min: 0,    max: 9999, step: 1    },
+    { key: 'spawnCountMult', label: 'Spawn Mult ×',     min: 0,    max: 9999, step: 0.1  },
+    { key: 'levelScaleDiv',  label: 'Level Scale Div',  min: 1,    max: 9999, step: 1    },
+    { key: 'maxEnemies',     label: 'Max Enemies',      min: 1,    max: 9999, step: 10   },
+    { key: 'fastFromLevel',  label: 'Fast From Level',  min: 1,    max: 9999, step: 1    },
+    { key: 'tankFromLevel',  label: 'Tank From Level',  min: 1,    max: 9999, step: 1    },
+    { key: 'fastMaxChance',  label: 'Fast Max Chance',  min: 0,    max: 9999, step: 0.05 },
+    { key: 'tankMaxChance',  label: 'Tank Max Chance',  min: 0,    max: 9999, step: 0.05 },
     { section: 'ENEMIES' },
-    { key: 'normalHp',       label: 'Normal HP',        min: 1,    max: 20,   step: 1    },
-    { key: 'normalSpdMin',   label: 'Normal Spd Min',   min: 0.3,  max: 3.0,  step: 0.1  },
-    { key: 'normalSpdMax',   label: 'Normal Spd Max',   min: 0.5,  max: 5.0,  step: 0.1  },
-    { key: 'normalXp',       label: 'Normal XP',        min: 1,    max: 50,   step: 1    },
-    { key: 'fastHp',         label: 'Fast HP',          min: 1,    max: 10,   step: 1    },
-    { key: 'fastSpdMin',     label: 'Fast Spd Min',     min: 1.0,  max: 5.0,  step: 0.1  },
-    { key: 'fastSpdMax',     label: 'Fast Spd Max',     min: 1.5,  max: 8.0,  step: 0.1  },
-    { key: 'fastXp',         label: 'Fast XP',          min: 1,    max: 50,   step: 1    },
-    { key: 'tankHp',         label: 'Tank HP',          min: 5,    max: 50,   step: 1    },
-    { key: 'tankSpdMin',     label: 'Tank Spd Min',     min: 0.1,  max: 2.0,  step: 0.05 },
-    { key: 'tankSpdMax',     label: 'Tank Spd Max',     min: 0.2,  max: 3.0,  step: 0.05 },
-    { key: 'tankXp',         label: 'Tank XP',          min: 5,    max: 100,  step: 5    },
+    { key: 'normalHp',       label: 'Normal HP',        min: 1,    max: 9999, step: 1    },
+    { key: 'normalSpdMin',   label: 'Normal Spd Min',   min: 0,    max: 9999, step: 0.1  },
+    { key: 'normalSpdMax',   label: 'Normal Spd Max',   min: 0,    max: 9999, step: 0.1  },
+    { key: 'normalXp',       label: 'Normal XP',        min: 0,    max: 9999, step: 1    },
+    { key: 'fastHp',         label: 'Fast HP',          min: 1,    max: 9999, step: 1    },
+    { key: 'fastSpdMin',     label: 'Fast Spd Min',     min: 0,    max: 9999, step: 0.1  },
+    { key: 'fastSpdMax',     label: 'Fast Spd Max',     min: 0,    max: 9999, step: 0.1  },
+    { key: 'fastXp',         label: 'Fast XP',          min: 0,    max: 9999, step: 1    },
+    { key: 'tankHp',         label: 'Tank HP',          min: 1,    max: 9999, step: 1    },
+    { key: 'tankSpdMin',     label: 'Tank Spd Min',     min: 0,    max: 9999, step: 0.05 },
+    { key: 'tankSpdMax',     label: 'Tank Spd Max',     min: 0,    max: 9999, step: 0.05 },
+    { key: 'tankXp',         label: 'Tank XP',          min: 0,    max: 9999, step: 5    },
     { section: 'PLAYER' },
-    { key: 'playerSpeed',    label: 'Player Speed',     min: 1,    max: 10,   step: 0.5  },
-    { key: 'playerRadius',   label: 'Player Radius',    min: 8,    max: 30,   step: 1    },
-    { key: 'baseFireRate',   label: 'Base Fire Rate',   min: 2,    max: 60,   step: 2    },
-    { key: 'baseDamage',     label: 'Base Damage',      min: 1,    max: 10,   step: 1    },
-    { key: 'invincibility',  label: 'Invincibility',    min: 20,   max: 180,  step: 10   },
-    { key: 'startHearts',    label: 'Start Hearts',     min: 1,    max: 5,    step: 1    },
+    { key: 'playerSpeed',    label: 'Player Speed',     min: 0.5,  max: 9999, step: 0.5  },
+    { key: 'playerRadius',   label: 'Player Radius',    min: 4,    max: 9999, step: 1    },
+    { key: 'baseFireRate',   label: 'Base Fire Rate',   min: 1,    max: 9999, step: 2    },
+    { key: 'baseDamage',     label: 'Base Damage',      min: 1,    max: 9999, step: 1    },
+    { key: 'invincibility',  label: 'Invincibility',    min: 0,    max: 9999, step: 10   },
+    { key: 'startHearts',    label: 'Start Hearts',     min: 1,    max: 9999, step: 1    },
     { section: 'BULLETS' },
-    { key: 'bulletSpeed',    label: 'Bullet Speed',     min: 4,    max: 20,   step: 1    },
-    { key: 'bulletLifetime', label: 'Bullet Lifetime',  min: 30,   max: 240,  step: 10   },
-    { key: 'bulletRadius',   label: 'Bullet Radius',    min: 2,    max: 12,   step: 1    },
+    { key: 'bulletSpeed',    label: 'Bullet Speed',     min: 1,    max: 9999, step: 1    },
+    { key: 'bulletLifetime', label: 'Bullet Lifetime',  min: 10,   max: 9999, step: 10   },
+    { key: 'bulletRadius',   label: 'Bullet Radius',    min: 1,    max: 9999, step: 1    },
     { section: 'XP & LEVELS' },
-    { key: 'xpStart',        label: 'XP Start',         min: 10,   max: 200,  step: 10   },
-    { key: 'xpMultiplier',   label: 'XP Multiplier',    min: 1.05, max: 2.0,  step: 0.05 },
+    { key: 'xpStart',        label: 'XP Start',         min: 1,    max: 9999, step: 10   },
+    { key: 'xpMultiplier',   label: 'XP Multiplier',    min: 1.0,  max: 9999, step: 0.05 },
     { section: 'UPGRADES' },
-    { key: 'maxShields',     label: 'Max Shields',      min: 1,    max: 12,   step: 1    },
-    { key: 'maxDarkHearts',  label: 'Max Dark Hearts',  min: 1,    max: 5,    step: 1    },
-    { key: 'maxDirections',  label: 'Max Directions',   min: 1,    max: 4,    step: 1    },
-    { key: 'maxSpread',      label: 'Max Spread',       min: 1,    max: 5,    step: 2    },
-    { key: 'maxFocusLevels', label: 'Max Focus Levels', min: 1,    max: 5,    step: 1    },
+    { key: 'maxShields',     label: 'Max Shields',      min: 0,    max: 9999, step: 1    },
+    { key: 'maxDarkHearts',  label: 'Max Dark Hearts',  min: 0,    max: 9999, step: 1    },
+    { key: 'maxDirections',  label: 'Max Directions',   min: 1,    max: 9999, step: 1    },
+    { key: 'maxSpread',      label: 'Max Spread',       min: 1,    max: 9999, step: 2    },
+    { key: 'maxFocusLevels', label: 'Max Focus Levels', min: 0,    max: 9999, step: 1    },
     { section: 'SHIELDS' },
-    { key: 'shieldDamage',   label: 'Shield Damage',    min: 0.1,  max: 5,    step: 0.1  },
-    { key: 'shieldCooldown', label: 'Shield Cooldown',  min: 5,    max: 60,   step: 5    },
-    { key: 'shieldOrbitR',   label: 'Shield Orbit R',   min: 30,   max: 100,  step: 5    },
+    { key: 'shieldDamage',   label: 'Shield Damage',    min: 0,    max: 9999, step: 0.1  },
+    { key: 'shieldCooldown', label: 'Shield Cooldown',  min: 1,    max: 9999, step: 5    },
+    { key: 'shieldOrbitR',   label: 'Shield Orbit R',   min: 10,   max: 9999, step: 5    },
 ];
 let advancedSettings = { ...ADV_DEFAULTS };
 function loadAdvancedSettings() {
@@ -404,7 +408,7 @@ function handleSettingsTap(cx, cy) {
             const btnW = 28, plusX = panelX + panelW - 8 - btnW, minusX = plusX - 4 - btnW;
             const btnScreenY = scrAbsTop + accumY - settingsScrollY + 6;
             if (cx >= plusX && cx <= plusX + btnW && cy >= btnScreenY && cy <= btnScreenY + 26) {
-                advancedSettings[row.key] = Math.min(row.max, +((advancedSettings[row.key] + row.step).toFixed(4)));
+                advancedSettings[row.key] = +((advancedSettings[row.key] + row.step).toFixed(4));
                 saveAdvancedSettings(); return;
             }
             if (cx >= minusX && cx <= minusX + btnW && cy >= btnScreenY && cy <= btnScreenY + 26) {
@@ -436,6 +440,7 @@ function initMenuEnemies() {
 
 function spawnEnemy(type) {
     const a = advancedSettings;
+    if (enemies.length >= a.maxEnemies) return;
     if (!type) {
         const r = Math.random();
         const fl = a.fastFromLevel, tl = a.tankFromLevel;
@@ -543,7 +548,7 @@ function update() {
     spawnTimer++;
     if (spawnTimer >= spawnInterval) {
         spawnTimer = 0;
-        const count = advancedSettings.waveBaseSize + Math.floor(level / 4);
+        const count = Math.max(0, Math.round((advancedSettings.waveBaseSize + Math.floor(level / advancedSettings.levelScaleDiv)) * advancedSettings.spawnCountMult));
         for (let i = 0; i < count; i++) spawnEnemy();
         const minI = advancedSettings.minInterval;
         if (spawnInterval > minI) spawnInterval = Math.max(minI, spawnInterval - advancedSettings.intervalDecay);
