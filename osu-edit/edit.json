@@ -1,0 +1,77 @@
+{
+  "output": "out/mrekk_edit.mp4",
+  "size": [1080, 1920],
+  "fps": 60,
+  "bpm_hints": {},
+
+  "intro": {
+    "clip": "clips/demo1.mp4", "start": 2.7, "beats": 8, "rate": 0.8,
+    "texts": [
+      {"style": "type", "text": "14.06.2026", "at": 0.12, "until": 1.25, "unit": "sec", "y": 0.42, "size": 70},
+      {"style": "type", "text": "cryshina takes #1", "at": 0.5, "until": 1.25, "unit": "sec", "y": 0.47, "size": 46, "color": [255, 90, 110]},
+      {"style": "type", "text": "27 days later", "at": 1.4, "until": 2.05, "unit": "sec", "y": 0.45, "size": 52},
+      {"style": "slam", "text": "11.07.2026", "at": 2.1, "until": 2.85, "unit": "sec", "y": 0.5, "size": 150, "exit": "zoom"}
+    ]
+  },
+
+  "segments": [
+    {
+      "clip": "clips/demo1.mp4", "start": 5.1, "beats": 12, "out": "sweep",
+      "cam": {"zoom": 1.2, "punch": 0.1, "roll": 2.5},
+      "grade": {"tint": [1.15, 0.78, 0.8], "contrast": 1.3},
+      "rgb": 4,
+      "texts": [
+        {"style": "slam", "text": "MREKK", "at": 0, "until": 3.6, "y": 0.4, "size": 250, "glow": 16, "glow_color": [255, 40, 60], "tracking": 4},
+        {"style": "slam", "text": "#1 AGAIN", "at": 0.5, "until": 3.6, "y": 0.5, "size": 84, "color": [255, 210, 215]},
+        {"style": "tag", "text": "1760PP", "sub": "SAVE ME [NIGHTMARE] +HDDT  •  PP RECORD '24", "at": 5, "until": 11, "y": 0.68, "accent": [255, 50, 80]}
+      ]
+    },
+    {
+      "clip": "clips/demo2.mp4", "start": 3.05, "beats": 12, "out": "stutter",
+      "reveal_beats": 2, "echo": [6, 12],
+      "cam": {"zoom": 1.25, "punch": 0.12, "roll": 3},
+      "grade": {"tint": [1.0, 0.82, 1.18], "contrast": 1.3},
+      "texts": [
+        {"style": "tag", "text": "1200+ DAYS", "sub": "AS THE GLOBAL #1", "at": 2.5, "until": 10.5, "y": 0.68, "accent": [190, 90, 255]}
+      ]
+    },
+    {
+      "clip": "clips/demo3.mp4", "start": 2.47, "beats": 16, "out": "tapestop",
+      "jumpcut": [8, 15], "strobe": [12, 15], "echo": [8, 16],
+      "cam": {"zoom": 1.2, "punch": 0.12, "roll": 3},
+      "grade": {"tint": [0.8, 1.0, 1.2], "contrast": 1.3},
+      "texts": [
+        {"style": "cards", "at": 0, "until": 8, "y": 0.45, "stagger": 0.5, "push_beats": 2, "items": [
+          {"badge": "1ST", "badge_color": [255, 190, 40], "title": "The Roundtable Open 2026", "sub": "Grand Final  •  6 : 2", "value": "WIN"},
+          {"badge": "1ST", "badge_color": [255, 190, 40], "title": "Lazer Grand Arena 2026", "sub": "31.05.2026", "value": "WIN"},
+          {"badge": "1ST", "badge_color": [255, 190, 40], "title": "COE 1v1 2026", "sub": "Grand Final  •  6 : 0", "value": "6-0"},
+          {"badge": "#1", "badge_color": [90, 200, 255], "title": "Global Rank", "sub": "Reclaimed 11.07.2026", "value": "#1"}
+        ]},
+        {"style": "slam", "text": "UNTOUCHABLE", "at": 12, "until": 15.2, "y": 0.42, "size": 130, "glow": 12, "glow_color": [0, 200, 255]}
+      ]
+    },
+    {
+      "clip": "clips/demo4.mp4", "start": 4.2, "beats": 12, "out": "cut",
+      "echo": [0, 12], "build": [8, 12],
+      "cam": {"zoom": 1.2, "punch": 0.13, "roll": 3},
+      "grade": {"tint": [1.2, 1.0, 0.72], "contrast": 1.3},
+      "texts": [
+        {"style": "slam", "text": "THE", "at": 0, "until": 1.8, "y": 0.42, "size": 200, "glow": 14, "glow_color": [255, 190, 40]},
+        {"style": "slam", "text": "GREATEST", "at": 2, "until": 3.8, "y": 0.42, "size": 170, "glow": 14, "glow_color": [255, 190, 40]},
+        {"style": "slam", "text": "OF ALL", "at": 4, "until": 5.8, "y": 0.42, "size": 200, "glow": 14, "glow_color": [255, 190, 40]},
+        {"style": "slam", "text": "TIME.", "at": 6, "until": 11.8, "y": 0.42, "size": 240, "glow": 18, "glow_color": [255, 190, 40]}
+      ]
+    }
+  ],
+
+  "outro": {
+    "dur": 2.3,
+    "grade": {"tint": [1.1, 1.0, 0.85], "contrast": 1.4},
+    "texts": [
+      {"style": "slam", "text": "MREKK", "at": 0.0, "until": 2.0, "unit": "sec", "y": 0.45, "size": 260, "glow": 20, "glow_color": [255, 190, 40], "tracking": 6, "exit": "zoom"},
+      {"style": "slam", "text": "1 OF 1", "at": 0.45, "until": 2.0, "unit": "sec", "y": 0.545, "size": 80, "tracking": 30, "color": [255, 220, 150], "exit": "zoom"}
+    ]
+  },
+
+  "voiceover": []
+}
