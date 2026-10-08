@@ -221,3 +221,91 @@ def rms(x):
 def master(x, drive=1.6, ceiling=0.93):
     x = np.tanh(x * drive) / np.tanh(drive)
     return x / max(np.max(np.abs(x)), 1e-9) * ceiling
+
+
+# ---------------------------------------------------------------- motion SFX
+def sfx_hit():
+    """osu! hit: clap + bright ping."""
+    t = t_arr(0.4)
+    ping = np.sin(2 * np.pi * 1320 * t) * np.exp(-t / 0.06) * 0.25
+    hs = np.zeros(len(t))
+    h = hitsound(clap=True) * 1.6
+    hs[: len(h)] = h
+    return stereo(hs + ping) + reverb(stereo(ping), 0.6, 0.6)[: len(t)] * 0.5
+
+
+def sfx_stamp():
+    t = t_arr(0.35)
+    f = 40 + 60 * np.exp(-t / 0.03)
+    thud = np.sin(2 * np.pi * np.cumsum(f) / SR) * np.exp(-t / 0.09)
+    click = lowpass(rng.standard_normal(len(t)), 3500) * np.exp(-t / 0.012) * 0.7
+    return stereo(np.tanh((thud * 1.3 + click) * 1.4)) * 0.8
+
+
+def sfx_swipe(dur=0.22):
+    t = t_arr(dur)
+    env = np.sin(np.pi * np.clip(t / dur, 0, 1)) ** 1.5
+    n = rng.standard_normal((len(t), 2))
+    n = stft_filter_sweep(n, 700, 7000, kind="low", curve=0.8)
+    n = highpass(n, 500)
+    pan = np.linspace(0.2, 1.0, len(t))
+    n[:, 0] *= 1 - pan * 0.6
+    n[:, 1] *= 0.4 + pan * 0.6
+    return n * env[:, None] * 0.6
+
+
+def sfx_tick():
+    t = t_arr(0.02)
+    s = np.sin(2 * np.pi * 4200 * t) * np.exp(-t / 0.003) + highpass(rng.standard_normal(len(t)), 5000) * np.exp(-t / 0.002) * 0.5
+    return stereo(s * 0.5)
+
+
+def sfx_pop():
+    t = t_arr(0.12)
+    f = 500 + 900 * (1 - np.exp(-t / 0.02))
+    s = np.sin(2 * np.pi * np.cumsum(f) / SR) * np.exp(-t / 0.04)
+    return stereo(s * 0.6)
+
+
+def sfx_ting():
+    t = t_arr(0.7)
+    s = sum(np.sin(2 * np.pi * f * t) * np.exp(-t / d) * a for f, d, a in ((2600, 0.35, 0.5), (3900, 0.22, 0.3), (5300, 0.15, 0.2)))
+    return reverb(stereo(s * 0.35), 0.9, 0.3)[: len(t)]
+
+
+def sfx_glitch(dur=0.12):
+    n = n_samples(dur)
+    hold = max(1, int(SR / 2200))
+    noise = np.repeat(rng.uniform(-1, 1, n // hold + 1), hold)[:n]
+    t = np.arange(n) / SR
+    steps = np.repeat(rng.choice([220, 440, 660, 990, 1320], n // 600 + 1), 600)[:n]
+    sq = signal.square(2 * np.pi * np.cumsum(steps) / SR) * 0.4
+    gate = (np.sin(2 * np.pi * 38 * t) > -0.2).astype(float)
+    s = (noise * 0.5 + sq) * gate * np.minimum(1, (dur - t) / 0.01)
+    return stereo(np.round(s * 6) / 6 * 0.35)
+
+
+def sfx_scramble(dur=0.3):
+    out = np.zeros((n_samples(dur), 2))
+    t = 0.0
+    while t < dur - 0.02:
+        tk = sfx_tick() * rng.uniform(0.3, 0.8)
+        place(out, tk * (1 if rng.random() > 0.5 else 0.6), n_samples(t))
+        t += rng.uniform(0.018, 0.04)
+    return out
+
+
+def vinyl(dur):
+    n = n_samples(dur)
+    hiss = lowpass(rng.standard_normal(n), 3000) * 0.08
+    crack = np.zeros(n)
+    idx = rng.integers(0, n, max(1, int(dur * 18)))
+    crack[idx] = rng.uniform(0.3, 1.0, len(idx)) * rng.choice([-1, 1], len(idx))
+    crack = bandpass(crack, 900, 6000)
+    return stereo(hiss + crack * 2.5)
+
+
+SFX = {
+    "hit": sfx_hit, "stamp": sfx_stamp, "swipe": sfx_swipe, "tick": sfx_tick, "pop": sfx_pop, "ting": sfx_ting,
+    "glitch": sfx_glitch, "scramble": sfx_scramble, "whoosh": whoosh, "impact": impact,
+}
