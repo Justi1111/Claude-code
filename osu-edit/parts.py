@@ -625,8 +625,6 @@ def sfx_card(seg):
     if card.get("pp"):
         out += ticks(tc + 0.25, 0.9, 0, card["pp"], 20)
         out.append((tc + 1.15, "stamp", 0.35))
-    for i, _ in enumerate(card.get("badges", [])):
-        out.append((tc + 1.15 + 0.18 * i, "ting", 0.45))
     return out
 
 
