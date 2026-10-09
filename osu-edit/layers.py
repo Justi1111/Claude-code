@@ -402,3 +402,41 @@ def speed_lines(canvas, c, amount, seed, k=1.0, n=56, color=(255, 255, 255)):
 def screen(a, b):
     """Screen blend of two uint8 images."""
     return cv2.subtract(255, cv2.multiply(cv2.subtract(255, a), cv2.subtract(255, b), scale=1 / 255))
+
+
+def flare(canvas, c, amount, color=(255, 220, 180), k=1.0, length=0.55):
+    """Anamorphic horizontal light streak through point c."""
+    if amount <= 0.02:
+        return
+    H, W = canvas.shape[:2]
+    hh = int(36 * k)
+    y0, y1 = int(max(0, c[1] - hh)), int(min(H, c[1] + hh))
+    if y1 <= y0:
+        return
+    ys = (np.arange(y0, y1, dtype=np.float32) - c[1])[:, None]
+    xs = (np.arange(W, dtype=np.float32) - c[0])[None, :]
+    core = np.exp(-(ys / (2.2 * k)) ** 2) * np.exp(-np.abs(xs) / (W * length))
+    halo = np.exp(-(ys / (12 * k)) ** 2) * np.exp(-np.abs(xs) / (W * length * 0.5)) * 0.35
+    a = (core + halo) * amount
+    roi = canvas[y0:y1].astype(np.float32)
+    roi += a[..., None] * np.array(color[::-1], np.float32)
+    canvas[y0:y1] = np.clip(roi, 0, 255).astype(np.uint8)
+    ring(canvas, c, 26 * k * amount + 4, max(1, 2 * k), color, 0.5 * amount)
+
+
+def glow_dot(canvas, c, r, color, alpha):
+    """Soft additive glow (for click pulses and particles)."""
+    if alpha <= 0.02 or r < 1:
+        return
+    H, W = canvas.shape[:2]
+    R = int(r * 2.5) + 2
+    x0, y0, x1, y1 = int(c[0]) - R, int(c[1]) - R, int(c[0]) + R, int(c[1]) + R
+    X0, Y0, X1, Y1 = max(0, x0), max(0, y0), min(W, x1), min(H, y1)
+    if X1 <= X0 or Y1 <= Y0:
+        return
+    yy, xx = np.mgrid[Y0:Y1, X0:X1].astype(np.float32)
+    d2 = ((xx - c[0]) ** 2 + (yy - c[1]) ** 2) / (r * r)
+    a = np.exp(-d2) * alpha
+    roi = canvas[Y0:Y1, X0:X1].astype(np.float32)
+    roi += a[..., None] * np.array(color[::-1], np.float32)
+    canvas[Y0:Y1, X0:X1] = np.clip(roi, 0, 255).astype(np.uint8)

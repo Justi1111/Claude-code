@@ -396,3 +396,46 @@ def mask_fill(canvas, text, size, fname, cx, cy, fill_img, alpha=1.0, tracking=0
     H, W = canvas.shape[:2]
     m = _mask_full(text, int(size), fname, int(tracking), W, H, int(cx), int(cy))[..., None] * alpha
     canvas[:] = (canvas.astype(np.float32) * (1 - m) + fill_img.astype(np.float32) * m).astype(np.uint8)
+
+
+def shine_text(canvas, text, size, fname, cx, cy, p, strength=0.85, tracking=0):
+    """Diagonal light band sweeping across the letters of a text (p 0..1)."""
+    if p <= 0 or p >= 1:
+        return
+    H, W = canvas.shape[:2]
+    m = _mask_full(text, int(size), fname, int(tracking), W, H, int(cx), int(cy))
+    ys, xs = np.nonzero(m > 0.01)
+    if len(xs) == 0:
+        return
+    x0, x1, y0, y1 = xs.min(), xs.max() + 1, ys.min(), ys.max() + 1
+    sub = m[y0:y1, x0:x1]
+    gx = np.arange(x0, x1, dtype=np.float32)[None, :]
+    gy = np.arange(y0, y1, dtype=np.float32)[:, None]
+    pos = x0 + (x1 - x0) * (p * 1.6 - 0.3)
+    band = np.exp(-(((gx - pos) + (gy - y0) * 0.45) / (0.05 * (x1 - x0))) ** 2) * strength
+    roi = canvas[y0:y1, x0:x1].astype(np.float32)
+    roi += (band * sub)[..., None] * 255
+    canvas[y0:y1, x0:x1] = np.clip(roi, 0, 255).astype(np.uint8)
+
+
+def slice_sprite(spr, n, amp, seed=0):
+    """Glitch-shift horizontal bands of a BGRA sprite (amp in px, 0 = intact)."""
+    if amp < 1:
+        return spr
+    out = np.zeros_like(spr)
+    h, w = spr.shape[:2]
+    pad = int(amp) + 2
+    out = np.zeros((h, w + 2 * pad, 4), np.uint8)
+    for i in range(n):
+        y0, y1 = int(i * h / n), int((i + 1) * h / n)
+        dx = int(amp * (1 if (_hash(seed, i) % 2) else -1) * (0.4 + 0.6 * _rand(seed, i, 5)))
+        out[y0:y1, pad + dx:pad + dx + w] = spr[y0:y1]
+    return out
+
+
+def glyph_fill_sprite(ch, size, fname, fill_bgr):
+    """A letter-shaped BGRA sprite filled with an image (resized to the glyph box)."""
+    m = gfx.text_mask(ch, size, fname)
+    h, w = m.shape
+    img = cv2.resize(fill_bgr, (w, h), interpolation=cv2.INTER_AREA)
+    return np.ascontiguousarray(np.dstack([img, (m * 255).astype(np.uint8)]))

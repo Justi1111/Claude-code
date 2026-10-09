@@ -217,7 +217,7 @@ def analyse_clip(path, bpm_hint=None):
 
 # ======================================================================= clip access
 class Clip:
-    def __init__(self, path, bpm_hint=None, shift=0, replay=None):
+    def __init__(self, path, bpm_hint=None, shift=0, replay=None, pp_hud=False):
         self.shift = shift  # manual downbeat correction in beats
         self.path = os.path.join(HERE, path)
         self.info = analyse_clip(self.path, bpm_hint)
@@ -233,6 +233,11 @@ class Clip:
         self.cache = collections.OrderedDict()
         if replay:
             self._use_replay(replay)
+        self.pp = None
+        if pp_hud:
+            import hudpp
+            r = hudpp.pp_track(self.path)
+            self.pp, self.pp_fps = np.array(r["pp"]), r["fps"]
 
     @property
     def audio(self):
@@ -298,6 +303,12 @@ class Clip:
                   f"{info['offset'] * 1000:.1f} ms, downbeat {info['downbeat']} (fit {info['press_R']:.2f})")
             self.info = dict(self.info, **info)
             self.period = info["period"]
+
+    def pp_at(self, t):
+        """Live pp shown by danser at clip time t (None if unknown)."""
+        if self.pp is None or not len(self.pp):
+            return None
+        return float(np.interp(t * self.pp_fps, np.arange(len(self.pp)), self.pp))
 
     def cursor_at(self, t):
         if getattr(self, "cursor", None) is None:
@@ -501,7 +512,8 @@ def make_ctx(cfg, preview):
     ctx.k = ctx.W / 1080
     ctx.clips = {}
     for name, cc in cfg["clips"].items():
-        ctx.clips[name] = Clip(cc["file"], cc.get("bpm"), cc.get("downbeat_shift", 0), cc.get("replay"))
+        ctx.clips[name] = Clip(cc["file"], cc.get("bpm"), cc.get("downbeat_shift", 0), cc.get("replay"),
+                               cc.get("pp_hud", False))
     segs = build_timeline(cfg, ctx.clips)
     ctx.src_start, ctx.grade_name = {}, {}
     for s in segs:

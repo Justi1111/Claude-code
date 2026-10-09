@@ -13,7 +13,8 @@
         "file": "replays/e410093b-solo-replay-osu_1256809_3423842048.osr",
         "offset": 298.988,
         "rate": 1.5
-      }
+      },
+      "pp_hud": true
     },
     "crystalia": {
       "file": "clips/danser_1475722.mp4",
@@ -21,7 +22,8 @@
         "file": "replays/8cb49965-solo-replay-osu_1475722_6108359037.osr",
         "offset": 88.034,
         "rate": 1.5
-      }
+      },
+      "pp_hud": true
     },
     "eye": {
       "file": "clips/danser_5774158.mp4",
@@ -29,7 +31,8 @@
         "file": "replays/c16cb98e-solo-replay-osu_5774158_7346217987.osr",
         "offset": 130.551,
         "rate": 1.0
-      }
+      },
+      "pp_hud": true
     },
     "map172": {
       "file": "clips/danser_5589237.mp4",
@@ -37,7 +40,8 @@
         "file": "replays/d691de7b-solo-replay-osu_5589237_7312101167.osr",
         "offset": 242.973,
         "rate": 1.5
-      }
+      },
+      "pp_hud": true
     }
   },
   "hook": {
@@ -56,23 +60,21 @@
       "style": "record",
       "clip": "saveme",
       "start": 5.478,
-      "beats": 12,
+      "beats": 9,
       "pulse": 2,
       "out": "sweep",
       "counter": {
-        "to": 4292,
-        "suffix": "x",
+        "live": true,
+        "suffix": "PP",
         "beats": [
-          1.0,
-          6.5
+          0.6,
+          3.0
         ]
       },
       "caption": "SAVE ME  +HDDT",
       "sub": "98.20%  //  0 MISS",
-      "freeze": 8,
-      "stamp": "0 MISS",
       "bg_word": "SAVE ME",
-      "stamp_size": 150
+      "zoom_beats": 1
     },
     {
       "style": "reign",
@@ -83,30 +85,21 @@
       "out": "stutter",
       "counter": {
         "from": 0,
-        "to": 881,
+        "to": 1846,
         "prefix": "",
-        "after": "x",
+        "after": "PP",
         "lead_zeros": false,
         "beats": [
           1.0,
           5.0
         ]
       },
-      "caption": "97.44%  //  0 MISS",
+      "caption": "CRYSTALIA  +HDDT",
       "marquee": [
-        "CRYSTALIA  •  +HDDT  •  ",
-        "405 BPM  •  881x  •  "
+        "AIM PP RECORD  •  CRYSTALIA  •  ",
+        "1846PP  •  +HDDT  •  97.44%  •  "
       ],
-      "big": "405 BPM",
-      "tag": {
-        "title": "CRYSTALIA +HDDT",
-        "stats": "97.44%  //  881x  //  0 MISS",
-        "beats": [
-          7,
-          11
-        ],
-        "y": 0.12
-      }
+      "big": "AIM PP RECORD"
     },
     {
       "style": "trophies",
@@ -116,11 +109,11 @@
       "pulse": 2,
       "out": "tapestop",
       "cuts_from": 5,
-      "word": "UNTOUCHABLE",
-      "word_sub": "99.58%  //  NO MOD",
+      "word": "NM PP RECORD",
+      "word_sub": "EYE OF ETERNITY  //  99.58%",
       "tag": {
         "title": "EYE OF ETERNITY",
-        "stats": "NM  //  99.58%  //  4094x FC",
+        "stats": "NOMOD  //  99.58%  //  4094x FC",
         "beats": [
           0.5,
           4.5
@@ -132,12 +125,12 @@
       "style": "return",
       "clip": "map172",
       "start": 3.584,
-      "beats": 16,
+      "beats": 20,
       "pulse": 2,
       "out": "cut",
       "again_at": 4,
-      "grid_at": 6,
-      "montage_at": 8,
+      "grid_at": 10,
+      "montage_at": 12,
       "montage": [
         "map172",
         "saveme",
@@ -146,51 +139,58 @@
       ],
       "words": [
         [
-          8,
+          12,
           "THE",
           "slam"
         ],
         [
-          9,
+          13,
           "GREATEST",
           "drop"
         ],
         [
-          10.5,
+          14.5,
           "OF ALL",
           "scatter"
         ],
         [
-          12,
+          16,
           "TIME.",
           "scale"
         ]
       ],
       "tag": {
-        "title": "+HDDT",
+        "title": "DOWN  +HDDT",
         "stats": "97.03%  //  2001x",
         "beats": [
-          8.2,
-          15.2
+          6.2,
+          9.6
         ],
-        "y": 0.12
+        "y": 0.09
       },
       "intro": {
-        "top": "+HDDT",
-        "big": "258",
-        "word": "BPM"
+        "big": "DOWN",
+        "word": "+HDDT"
       },
       "impact": {
-        "top": "97.03%",
-        "big": "2001x",
-        "word": "COMBO"
-      }
+        "top": "97.03%  //  2001x",
+        "big": "{pp}PP"
+      },
+      "showcase_at": 6
     }
   ],
   "outro": {
-    "dur": 1.7,
+    "dur": 2.2,
     "title": "MREKK",
-    "sub": "1 OF 1"
+    "sub": "1 OF 1",
+    "credits": "SAVE ME  •  CRYSTALIA  •  EYE OF ETERNITY  •  DOWN",
+    "letters_from": [
+      "saveme",
+      "crystalia",
+      "eye",
+      "map172",
+      "saveme"
+    ]
   },
   "voiceover": []
 }
