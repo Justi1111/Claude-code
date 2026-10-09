@@ -166,6 +166,122 @@ def tinted_fill(img, color):
     return L.screen(cv2.convertScaleAbs(grad, alpha=0.75), img)
 
 
+@lru_cache(maxsize=32)
+def pill_sprite(text, size, fill, fg, k, outline=False):
+    """Rounded badge with text (BGRA)."""
+    f = gfx.font("unb", size)
+    tw = int(f.getlength(text))
+    asc, desc = f.getmetrics()
+    padx, pady = int(size * 0.62), int(size * 0.32)
+    w, h = tw + 2 * padx, asc + desc + 2 * pady - int(desc * 0.6)
+    img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    if outline:
+        d.rounded_rectangle((1, 1, w - 2, h - 2), h // 2, outline=tuple(fill) + (255,), width=max(2, int(3 * k)))
+    else:
+        d.rounded_rectangle((0, 0, w - 1, h - 1), h // 2, fill=tuple(fill) + (255,))
+    d.text((w // 2, h // 2 + int(size * 0.04)), text, font=f, fill=tuple(fg) + (255,), anchor="mm")
+    return gfx.pil_to_bgra(img)
+
+
+@lru_cache(maxsize=32)
+def halo_sprite(text, size, fill, k):
+    """Soft coloured glow matching a pill badge."""
+    spr = pill_sprite(text, size, fill, (0, 0, 0), k)
+    pad = int(size * 0.9)
+    a = np.pad(spr[:, :, 3], pad).astype(np.float32)
+    a = cv2.GaussianBlur(a, (0, 0), size * 0.45)
+    out = np.zeros(a.shape + (4,), np.uint8)
+    out[:, :, :3] = fill[::-1]
+    out[:, :, 3] = np.clip(a * 1.2, 0, 255).astype(np.uint8)
+    return out
+
+
+def play_card(ctx, canvas, seg, b):
+    """The same stat block for every play: TITLE [MODS] / big pp for the play / record badges.
+    Shown at the top of the frame with one shared animation language (colour per part)."""
+    card = seg.cfg.get("card")
+    if not card:
+        return
+    W, H, k, P = ctx.W, ctx.H, ctx.k, seg.period
+    acc = tuple(card.get("color", ACCENT.get(seg.style, (255, 255, 255))))
+    b0, b1 = card.get("beats", [0.4, seg.cfg["beats"] - 0.7])
+    if b < b0 or b > b1 + 3:
+        return
+    u, ex = (b - b0) * P, (b1 - b0) * P
+    out = clamp01((u - ex) / 0.25)
+    alpha = 1 - out
+    lift = -60 * k * ease_in_cubic(out)
+    y = H * card.get("y", 0.075) + lift
+    # soft scrim at the top so the block reads on any footage
+    scrim = 0.6 * clamp01(u / 0.3) * alpha
+    if scrim > 0.01:
+        hh = int(H * 0.34)
+        ramp = (1 - scrim * np.clip(1 - np.arange(hh, dtype=np.float32) / hh, 0, 1) ** 1.3)[:, None, None]
+        canvas[:hh] = (canvas[:hh].astype(np.float32) * ramp).astype(np.uint8)
+    # title + mods pill
+    title = card["title"]
+    tsz = fit_size(title, "anton", W * 0.62, card.get("title_size", 78) * k)
+    tw = gfx.text_layout(title, tsz, "anton")[1]
+    mods = card.get("mods", "")
+    msz = int(34 * k)
+    pill = pill_sprite(mods, msz, acc, (12, 12, 16), round(k, 3)) if mods else None
+    pw = pill.shape[1] if pill is not None else 0
+    gap = 20 * k if pill is not None else 0
+    x0 = W / 2 - (tw + gap + pw) / 2
+    typo.letters(canvas, title, u, x0 + tw / 2, y, tsz, "anton", (255, 255, 255), "rise", 0.025, 0.3,
+                 glow=int(8 * k), glow_color=acc, exit_u=ex, exit_style="up", seed=101)
+    if pill is not None:
+        pu = u - 0.18
+        if pu > 0:
+            s = max(0.01, ease_out_back(pu / 0.25, 2.4))
+            gfx.blit(canvas, halo_sprite(mods, msz, acc, round(k, 3)), x0 + tw + gap + pw / 2, y + 6 * k, s, 0,
+                     alpha * (0.55 + 0.35 * beat_env(b, P, 8)))
+            gfx.blit(canvas, pill, x0 + tw + gap + pw / 2, y + 6 * k, s, 0, alpha)
+    # big pp for the play
+    pp = card.get("pp")
+    py = y + 120 * k
+    if pp:
+        cu = u - 0.25
+        val, vel = typo.count_value(cu, 0, 0.9, 0, pp)
+        land = cu - 0.9
+        pop = 1 + 0.16 * dec(land, 10) if land >= 0 else 1.0
+        psz = int(card.get("pp_size", 150) * k)
+        if land >= 0:
+            typo.outline_stack(canvas, f"{pp}PP", land, W / 2, py, psz, "unb", acc, 4, 0.08, max(2, int(3 * k)), 0.6,
+                               alpha * 0.9)
+        typo.counter(canvas, val, W / 2, py, psz, "unb", (255, 255, 255), len(str(pp)), "", "PP", vel, int(16 * k), acc,
+                     lead_zeros=False, alpha=alpha * clamp01(cu / 0.08), scale=pop * (1 + 0.03 * beat_env(b, P, 12)),
+                     affix_color=acc, fps=ctx.fps)
+        if land >= 0:
+            L.flare(canvas, (W / 2, py), 1.0 * dec(land, 6) * alpha, acc, k)
+    # record badges: pop in, pulse with the beat, a light sweep every two beats
+    by = py + (105 if pp else 20) * k
+    for i, text in enumerate(card.get("badges", [])):
+        bu = u - 1.15 - 0.18 * i
+        if bu < 0:
+            continue
+        bsz = int((40 if i == 0 else 30) * k)
+        filled = i == 0
+        spr = pill_sprite(text, bsz, acc if filled else acc, (12, 12, 16) if filled else acc, round(k, 3),
+                          outline=not filled)
+        sweep = ((b - b0 - 1.15) % 2) / 1.2
+        spr = shine(spr, sweep)
+        s = max(0.01, ease_out_back(bu / 0.25, 2.2)) * (1 + 0.04 * bar_env(b, P, 9))
+        yy = by + i * (bsz * 1.9)
+        if filled:
+            gfx.blit(canvas, halo_sprite(text, bsz, acc, round(k, 3)), W / 2, yy, s, 0,
+                     alpha * (0.6 + 0.4 * beat_env(b, P, 7)))
+        gfx.blit(canvas, spr, W / 2 + 10 * k * dec(bu, 18) * math.sin(bu * 80), yy, s, 0, alpha * min(1, bu / 0.05))
+        if bu < 0.2:
+            L.flare(canvas, (W / 2, yy), 0.8 * (1 - bu / 0.2) * alpha, acc, k, 0.35)
+    if card.get("stats"):
+        n = len(card.get("badges", []))
+        sy = by + (n * 1.9 * 36 * k if n else 0) + 10 * k
+        typo.scramble(canvas, card["stats"], u - 1.0, W / 2, sy, int(28 * k), "mono", (225, 225, 235), dur=0.4,
+                      exit_u=ex - 1.0 + 0.2, seed=104)
+
+
 def window_dims(ctx, frac=0.92):
     ww = ctx.W * frac
     return ww, ww * 0.75
@@ -251,26 +367,6 @@ def render_hook(ctx, seg, t):
             L.quad_outline(canvas, dst, (255, 255, 255), 3 * k)
         canvas = cv2.GaussianBlur(canvas, (0, 0), 1.6 * k + 5 * k * clamp01((b - 3) / 0.6))
         canvas = L.dim(canvas, 0.38 + 0.4 * clamp01((b - 3) / 0.5))
-    # ---- designer HUD: crosshair, ticks, frame brackets, corner labels
-    hud = ease_out_expo(b / 0.6) * (1 - clamp01((b - 3.55) / 0.3))
-    if hud > 0.01:
-        dimc = tuple(int(v * 0.42 * hud) for v in (255, 255, 255))
-        lx, ly = W * 0.48 * hud, H * 0.3 * hud
-        cv2.line(canvas, (int(c[0] - lx), int(c[1])), (int(c[0] + lx), int(c[1])), dimc, max(1, int(2 * k)), cv2.LINE_AA)
-        cv2.line(canvas, (int(c[0]), int(c[1] - ly)), (int(c[0]), int(c[1] + ly)), dimc, max(1, int(2 * k)), cv2.LINE_AA)
-        step = int(48 * k)
-        for i in range(1, int(lx / step) + 1):
-            for sgn in (-1, 1):
-                x = int(c[0] + sgn * i * step)
-                cv2.line(canvas, (x, int(c[1] - 7 * k)), (x, int(c[1] + 7 * k)), dimc, 1, cv2.LINE_AA)
-        inset = 44 * k
-        L.brackets(canvas, L.rect_quad(inset, inset, W - inset, H - inset), 70 * k * hud, 0, dimc, 2 * k)
-        for i, (txt, fx, fy, al) in enumerate(HUD_LABELS):
-            sz = int(22 * k)
-            tw = gfx.text_layout(txt, sz, "mono")[1]
-            x = W * fx if al == "l" else W * fx - tw
-            typo.scramble(canvas, txt, b * P - 0.05 * i, x, H * fy, sz, "mono", (200, 200, 210), dur=0.35,
-                          seed=90 + i, align="left", alpha=hud)
     # ---- the hit circle: particles stream in, it hits on beat 1
     r = 175 * k
     if b < 1:
@@ -421,7 +517,7 @@ def render_record(ctx, seg, t):
                     max(2, int(3 * k)))
     # swinging 3D card
     ww, wh = window_dims(ctx)
-    cy = H * 0.425
+    cy = H * cfg.get("window_y", 0.425)
     d = int(b // 4)
     tg = [-14, 12, -10, 13]
     prev = tg[(d - 1) % 4] if d > 0 else 0.0
@@ -462,7 +558,7 @@ def render_record(ctx, seg, t):
     if lab:
         typo.label(canvas, lab[0], lab[1], lab[2], (b - 0.35) * P, 56 * k, H * 0.1, k, acc, exit_u=(zt0 - 0.3) * P,
                    seed=11)
-    cc = cfg["counter"]
+    cc = cfg.get("counter") or {"to": 0, "hidden": True}
     c0, c1 = cc.get("beats", [1.0, 6.5])
     live = clip.pp_at(seg.src(t)) if cc.get("live") else None
     target = live if live is not None else cc["to"]
@@ -471,12 +567,12 @@ def render_record(ctx, seg, t):
         val, vel = float(round(live)), 0.0
     land = (b - c1) * P
     pop = 1 + 0.2 * dec(land, 11) if land >= 0 else 1.0
-    a_c = clamp01((b - c0 + 0.3) / 0.3) * (1 - clamp01((b - zt0) / 0.35))
-    digits = len(str(int(round(target))))
+    a_c = 0.0 if cc.get("hidden") else clamp01((b - c0 + 0.3) / 0.3) * (1 - clamp01((b - zt0) / 0.35))
+    digits = max(1, len(str(int(round(target)))))
     typo.counter(canvas, val, W / 2, H * 0.735, int(185 * k), "unb", (255, 255, 255), digits, cc.get("prefix", ""),
                  cc.get("suffix", "PP"), vel, int(12 * k), acc, lead_zeros=False, alpha=a_c, scale=pop, affix_color=acc,
                  fps=ctx.fps)
-    if land >= 0 and b < zt0:
+    if land >= 0 and b < zt0 and a_c > 0:
         typo.outline_stack(canvas, f"{int(round(target))}", land, W / 2 - 40 * k, H * 0.735, int(185 * k), "unb",
                            acc, 4, 0.09, max(2, int(3 * k)), 0.5, 0.8)
     ex = (zt0 - 2) * P
@@ -485,8 +581,9 @@ def render_record(ctx, seg, t):
     typo.scramble(canvas, cfg.get("sub", ""), (b - 2.6) * P, W / 2, H * 0.843, int(31 * k), "mono", (255, 130, 145),
                   exit_u=ex, seed=22)
     play_tag(ctx, canvas, seg, b)
+    play_card(ctx, canvas, seg, b)
     # post
-    img = ctx.post.bloom(canvas, 0.5 + 2 * punch)
+    img = ctx.post.bloom(canvas, 0.75 + 2 * punch)
     img = ctx.post.rgb_split(img, 1.5 * k + 14 * k * bar_env(b, P, 12) + 60 * k * ez)
     if b < 0.6:
         img = ctx.post.zoom_blur(img, 0.07 * (1 - b / 0.6))
@@ -597,12 +694,12 @@ def render_reign(ctx, seg, t):
         L.quad_outline(canvas, dst, acc, 4 * k)
         L.brackets(canvas, dst, (44 + 30 * bar_env(b, P, 7)) * k, 18 * k, (255, 255, 255), 4 * k)
     # typography (kept off the playfield)
-    cc = cfg["counter"]
+    cc = cfg.get("counter") or {"to": 0, "hidden": True}
     c0, c1 = cc.get("beats", [1.2, 5.0])
     val, vel = typo.count_value(b * P, c0 * P, (c1 - c0) * P, cc.get("from", 1), cc["to"])
     land = (b - c1) * P
     out_e = clamp01((b - 5.6) / 0.35)
-    a_c = clamp01((b - c0 + 0.3) / 0.3) * (1 - out_e)
+    a_c = 0.0 if cc.get("hidden") else clamp01((b - c0 + 0.3) / 0.3) * (1 - out_e)
     cy = ys[0] + bh * 0.42
     pop = 1 + 0.18 * dec(land, 11) if land >= 0 else 1.0
     right = typo.counter(canvas, val, W / 2 - 30 * k, cy, int(165 * k), "unb", (255, 255, 255), len(str(cc["to"])),
@@ -625,8 +722,9 @@ def render_reign(ctx, seg, t):
                      (255, 255, 255), "scatter", 0.025, 0.35, glow=int(10 * k), glow_color=acc,
                      exit_u=(nb - 1 - 8) * P, exit_style="glitch", seed=33)
     play_tag(ctx, canvas, seg, b)
+    play_card(ctx, canvas, seg, b)
     # post (light on the gameplay)
-    img = post.bloom(canvas, 0.55)
+    img = post.bloom(canvas, 0.8)
     rgb = 1.5 * k + 10 * k * bar_env(b, P, 12)
     if b < 0.5:  # zoom-out entrance (answers the record's zoom-through)
         e = ease_out_expo(b / 0.5)
@@ -770,7 +868,7 @@ def render_trophies(ctx, seg, t):
         L.put_shot(canvas, frame, clip, st, v, full(ctx), grade("ice_hot"))
         if ci % 4 == 0 and u_cut < 1.5 / ctx.fps:
             canvas = cv2.bitwise_not(canvas)
-        w = cfg.get("word", "UNTOUCHABLE")
+        w = cfg.get("word", "")
         ws = int(min(170 * k, W * 0.9 / max(1, len(w)) / 0.47))
         wy = H * 0.19
         typo.letters(canvas, w, (b - cut_b - 0.4) * P, W / 2 + 6 * k, wy + 6 * k, ws, "anton", acc, "flicker",
@@ -781,9 +879,10 @@ def render_trophies(ctx, seg, t):
             typo.scramble(canvas, cfg["word_sub"], (b - cut_b - 1.6) * P, W / 2, wy + ws * 0.62, int(40 * k), "mono",
                           acc, tracking=int(8 * k), seed=44)
     play_tag(ctx, canvas, seg, b)
+    play_card(ctx, canvas, seg, b)
     # tape stop: slow down, drain colour, wobble, black
     ts = clamp01(b - (nb - 1))
-    img = post.bloom(canvas, 0.5)
+    img = post.bloom(canvas, 0.8)
     img = post.rgb_split(img, 1.5 * k + 14 * k * dec(u_cut, 14))
     if ts > 0:
         g = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -810,8 +909,10 @@ def sfx_trophies(seg):
 
 
 # ======================================================================= RETURN
-def _fmt(s, clip, st):
-    """Expand {pp} with the live pp danser shows at clip time st."""
+def _fmt(s, clip, st, seg=None):
+    """Expand {card_pp} with the play's pp and {pp} with the live pp danser shows at clip time st."""
+    if s and "{card_pp}" in s and seg is not None:
+        s = s.replace("{card_pp}", str((seg.cfg.get("card") or {}).get("pp") or ""))
     if s and "{pp}" in s:
         pp = clip.pp_at(st)
         s = s.replace("{pp}", str(int(round(pp))) if pp is not None else "")
@@ -898,7 +999,9 @@ def render_return(ctx, seg, t):
         if im.get("top"):
             typo.scramble(canvas, _fmt(im["top"], clip, st), u - 0.02, W / 2, H * 0.12, int(56 * k), "mono", acc,
                           exit_u=ex, seed=54)
-        big = _fmt(im.get("big", ""), clip, seg.src(seg.t0 + lost_b * P))
+        big = _fmt(im.get("big", ""), clip, seg.src(seg.t0 + lost_b * P), seg)
+        if big in ("PP", ""):
+            big = ""
         if big:
             bsz = fit_size(big, "unb", W * 0.84, 400 * k)
             spr = gfx.text_sprite(big, bsz, "unb", acc, glow=int(18 * k), glow_color=(255, 140, 0))
@@ -908,7 +1011,7 @@ def render_return(ctx, seg, t):
         if im.get("word"):
             typo.letters(canvas, im["word"], u - 0.4 * P, W / 2, H * 0.70, int(140 * k), "anton", (255, 255, 255),
                          "spin", 0.04, 0.4, exit_u=ex - 0.4 * P, exit_style="scatter", seed=55)
-        img = post.bloom(canvas, 0.8)
+        img = post.bloom(canvas, 1.0)
         img = post.rgb_split(img, 1.5 * k + 34 * k * dec(u, 8))
         img = post.zoom_blur(img, 0.08 * dec(u, 6))
         return L.flash(img, 0.95 * dec(u, 5), (255, 225, 150))
@@ -926,14 +1029,16 @@ def render_return(ctx, seg, t):
         click_pulses(canvas, clip, st, M, k)
         L.quad_outline(canvas, dst, (255, 220, 150), 3 * k)
         L.brackets(canvas, dst, (40 + 30 * bar_env(b, P, 7)) * k, 18 * k, acc, 5 * k)
-        pp = clip.pp_at(st)
-        if pp is not None:
-            pp = float(round(pp))
-            a_c = clamp01((b - show_b) / 0.4) * (1 - clamp01((b - (grid_b - 0.3)) / 0.3))
-            typo.counter(canvas, pp, W / 2, H * 0.2, int(130 * k), "unb", (255, 255, 255), len(str(int(round(pp)))),
-                         "", "PP", 0.0, int(10 * k), acc, lead_zeros=False, alpha=a_c, affix_color=acc, fps=ctx.fps)
+        if cfg.get("live_pp"):
+            pp = clip.pp_at(st)
+            if pp is not None:
+                a_c = clamp01((b - show_b) / 0.4) * (1 - clamp01((b - (grid_b - 0.3)) / 0.3))
+                typo.counter(canvas, float(round(pp)), W / 2, H * 0.2, int(130 * k), "unb", (255, 255, 255),
+                             len(str(int(round(pp)))), "", "PP", 0.0, int(10 * k), acc, lead_zeros=False, alpha=a_c,
+                             affix_color=acc, fps=ctx.fps)
         play_tag(ctx, canvas, seg, b)
-        img = post.bloom(canvas, 0.55)
+        play_card(ctx, canvas, seg, b)
+        img = post.bloom(canvas, 0.8)
         img = post.rgb_split(img, 1.5 * k + 10 * k * bar_env(b, P, 12) + 6 * k * cenv)
         return L.flash(img, 0.35 * dec((b - show_b) * P, 9))
     if b < mont_b:  # ---------------- 3x3 grid
@@ -1031,7 +1136,7 @@ def render_return(ctx, seg, t):
         if last:
             typo.shine_text(canvas, wtxt, size, "anton", cx, cy + 0 * oy_w, ((b - wb) % 2) / 1.2)
     play_tag(ctx, canvas, seg, b)
-    img = post.bloom(canvas, 0.6 + 0.4 * build)
+    img = post.bloom(canvas, 0.8 + 0.4 * build)
     img = zoom_canvas(img, 1 + 0.12 * build ** 2, rot=3 * build * math.sin(t * 9))
     img = post.rgb_split(img, 1.5 * k + 16 * k * dec(u_cut, 14) + 14 * k * build)
     if u_cut < 0.04 and ci >= 8:

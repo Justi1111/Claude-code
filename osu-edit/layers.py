@@ -284,12 +284,15 @@ class Post:
         self.yy = np.tile(np.arange(H, dtype=np.float32)[:, None], (1, W))
 
     def bloom(self, img, amount, thresh=120):
+        """Tight glow plus a wide soft halo around bright things (circles, cursor, text)."""
         if amount <= 0:
             return img
         small = cv2.resize(img, (self.W // 6, self.H // 6), interpolation=cv2.INTER_AREA)
         small = cv2.subtract(small, (thresh, thresh, thresh, 0))
-        small = cv2.GaussianBlur(small, (0, 0), 7)
-        big = cv2.resize(small, (self.W, self.H), interpolation=cv2.INTER_LINEAR)
+        tight = cv2.GaussianBlur(small, (0, 0), 5)
+        wide = cv2.GaussianBlur(cv2.resize(small, (self.W // 18, self.H // 18), interpolation=cv2.INTER_AREA), (0, 0), 3)
+        big = cv2.addWeighted(cv2.resize(tight, (self.W, self.H), interpolation=cv2.INTER_LINEAR), 1.0,
+                              cv2.resize(wide, (self.W, self.H), interpolation=cv2.INTER_LINEAR), 1.3, 0)
         return cv2.addWeighted(img, 1.0, big, amount, 0)
 
     def rgb_split(self, img, amount):

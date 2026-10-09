@@ -63,18 +63,19 @@
       "beats": 9,
       "pulse": 2,
       "out": "sweep",
-      "counter": {
-        "live": true,
-        "suffix": "PP",
-        "beats": [
-          0.6,
-          3.0
-        ]
-      },
-      "caption": "SAVE ME  +HDDT",
-      "sub": "98.20%  //  0 MISS",
       "bg_word": "SAVE ME",
-      "zoom_beats": 1
+      "zoom_beats": 1,
+      "window_y": 0.49,
+      "card": {
+        "title": "SAVE ME",
+        "mods": "+HDDT",
+        "pp": null,
+        "stats": "98.20%  //  4292x",
+        "beats": [
+          0.3,
+          7.6
+        ]
+      }
     },
     {
       "style": "reign",
@@ -83,42 +84,45 @@
       "beats": 12,
       "pulse": 1,
       "out": "stutter",
-      "counter": {
-        "from": 0,
-        "to": 1846,
-        "prefix": "",
-        "after": "PP",
-        "lead_zeros": false,
-        "beats": [
-          1.0,
-          5.0
-        ]
-      },
-      "caption": "CRYSTALIA  +HDDT",
       "marquee": [
-        "AIM PP RECORD  •  CRYSTALIA  •  ",
-        "1846PP  •  +HDDT  •  97.44%  •  "
+        "TOP 2 PP RECORD  •  AIM PP RECORD  •  ",
+        "CRYSTALIA  •  1846PP  •  +HDDT  •  "
       ],
-      "big": "AIM PP RECORD"
+      "card": {
+        "title": "CRYSTALIA",
+        "mods": "+HDDT",
+        "pp": 1846,
+        "badges": [
+          "TOP 2 PP RECORD",
+          "AIM PP RECORD"
+        ],
+        "stats": "97.44%  //  881x",
+        "beats": [
+          0.3,
+          10.6
+        ]
+      }
     },
     {
       "style": "trophies",
       "clip": "eye",
-      "start": 3.965,
+      "start": 12.313,
       "beats": 10,
       "pulse": 2,
       "out": "tapestop",
       "cuts_from": 5,
-      "word": "NM PP RECORD",
-      "word_sub": "EYE OF ETERNITY  //  99.58%",
-      "tag": {
+      "card": {
         "title": "EYE OF ETERNITY",
-        "stats": "NOMOD  //  99.58%  //  4094x FC",
-        "beats": [
-          0.5,
-          4.5
+        "mods": "NM",
+        "pp": null,
+        "badges": [
+          "NM PP RECORD"
         ],
-        "y": 0.1
+        "stats": "99.58%  //  4094x FC",
+        "beats": [
+          0.3,
+          8.8
+        ]
       }
     },
     {
@@ -159,24 +163,25 @@
           "scale"
         ]
       ],
-      "tag": {
-        "title": "DOWN  +HDDT",
-        "stats": "97.03%  //  2001x",
-        "beats": [
-          6.2,
-          9.6
-        ],
-        "y": 0.09
-      },
       "intro": {
         "big": "DOWN",
         "word": "+HDDT"
       },
       "impact": {
         "top": "97.03%  //  2001x",
-        "big": "{pp}PP"
+        "big": "{card_pp}PP"
       },
-      "showcase_at": 6
+      "showcase_at": 6,
+      "card": {
+        "title": "DOWN",
+        "mods": "+HDDT",
+        "pp": null,
+        "stats": "97.03%  //  2001x",
+        "beats": [
+          6.1,
+          9.6
+        ]
+      }
     }
   ],
   "outro": {
