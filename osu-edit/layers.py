@@ -10,7 +10,7 @@ import numpy as np
 import gfx
 
 # osu! playfield inside a 16:9 recording (fractions of width/height)
-PF = dict(x=0.2, y=0.1167, w=0.6, h=0.8)
+PF = dict(x=0.2, y=0.1, w=0.6, h=0.8)  # danser renders: playfield centred vertically
 
 
 # ======================================================================= shots

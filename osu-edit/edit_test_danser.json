@@ -1,0 +1,24 @@
+{
+  "output": "out/test_danser.mp4",
+  "size": [1080, 1920],
+  "fps": 60,
+  "clips": {
+    "d1": {"file": "clips/danser_5589237.mp4",
+           "replay": {"file": "replays/d691de7b-solo-replay-osu_5589237_7312101167.osr", "offset": 242.96, "rate": 1.5}}
+  },
+  "hook": {"beats": 4, "word": "MREKK", "sub": "THE STORY OF THE #1", "flash": ["d1", "d1", "d1", "d1"]},
+  "parts": [
+    {"style": "record", "clip": "d1", "start": 4.6, "beats": 12, "out": "sweep",
+     "label": ["01", "THE RECORD", "PP RECORD // STD"],
+     "counter": {"to": 1760, "suffix": "PP", "beats": [1.0, 6.5]},
+     "caption": "SAVE ME [NIGHTMARE] +HDDT", "sub": "STD PP RECORD  //  30.08.2024",
+     "freeze": 8, "stamp": "RECORD", "bg_word": "RECORD"},
+    {"style": "return", "clip": "d1", "start": 10.6, "beats": 16, "out": "cut",
+     "lost": ["14.06.2026", "#1", "THRONE LOST", "cryshina takes #1"],
+     "again": ["11.07.2026", "#1", "AGAIN"], "again_at": 4, "grid_at": 6, "montage_at": 8,
+     "montage": ["d1"],
+     "words": [[8, "THE", "slam"], [9, "GREATEST", "drop"], [10.5, "OF ALL", "scatter"], [12, "TIME.", "scale"]]}
+  ],
+  "outro": {"dur": 1.6, "title": "MREKK", "sub": "1 OF 1", "small": "#1 GLOBAL  //  2026"},
+  "voiceover": []
+}

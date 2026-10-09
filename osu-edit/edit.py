@@ -88,8 +88,12 @@ def analyse_beats(y, bpm_hint=None):
         if sc > best[0]:
             best = (sc, period, o)
     off = (best[2] - 0.006) % period  # onset curve lags the attack by ~6 ms
-    # downbeat phase: chords change on bar lines -> compare whole bars either side of
-    # each candidate bar line (harmonic chroma), plus a little kick energy
+    phase = downbeat_phase(y, mono, period, off)
+    return dict(bpm=60 / period, period=float(period), offset=float(off), downbeat=phase)
+
+
+def downbeat_phase(y, mono, period, off):
+    """Which beat (0..3) of the grid is the bar line: chord changes + kick energy."""
     grid = np.arange(off, len(y) / SR - period, period)
     harm = librosa.effects.harmonic(mono)
     chroma = librosa.feature.chroma_stft(y=harm, sr=22050, hop_length=512, n_fft=8192)
@@ -107,7 +111,39 @@ def analyse_beats(y, bpm_hint=None):
         v = [np.linalg.norm(pb[b - 4:b].mean(0) - pb[b:b + 4].mean(0)) for b in range(p + 4, len(pb) - 3, 4)]
         score.append((np.mean(v) if v else 0) + 0.02 * kick[p::4].mean() / (kick.mean() + 1e-9))
     phase = int(np.argmax(score))
-    return dict(bpm=60 / period, period=float(period), offset=float(off), downbeat=phase)
+    return phase
+
+
+def beats_from_presses(y, presses, period_hint):
+    """Beat grid from replay key presses (notes sit on 1/2 or 1/4 of the beat), with the
+    audio choosing which subdivision is the beat and where the bar line is."""
+    T0 = 60 / period_hint
+    cands = [T0 * r for r in (1, 1.5, 2 / 3, 2, 0.5, 4 / 3, 0.75)]
+    cands = [T for T in cands if 120 <= T <= 300]
+    best = None
+    for T in cands:
+        for Tf in T * (1 + np.linspace(-0.006, 0.006, 241)):
+            P = 60 / Tf
+            for div in (2, 4):
+                ph = np.exp(2j * np.pi * presses / (P / div)).mean()
+                if best is None or abs(ph) > best[0]:
+                    best = (abs(ph), Tf, div, np.angle(ph))
+    R, T, div, ang = best
+    P = 60 / T
+    sub = P / div
+    off_sub = (ang / (2 * np.pi)) * sub % sub
+    mono = librosa.resample(y.mean(1), orig_sr=SR, target_sr=22050)
+    env = librosa.onset.onset_strength(y=mono, sr=22050, n_fft=512, hop_length=64)
+    te = np.arange(len(env)) * 64 / 22050
+    low = np.abs(S.lowpass(y.mean(1), 150, 4))
+
+    def score(o):
+        g = np.arange(o, len(y) / SR - 0.05, P)
+        k = np.array([low[int(x * SR): int(x * SR) + int(0.04 * SR)].mean() for x in g])
+        return np.interp(g, te, env).mean() / (env.mean() + 1e-9) + k.mean() / (low.mean() + 1e-9)
+    off = max((off_sub + j * sub for j in range(div)), key=score) % P
+    phase = downbeat_phase(y, mono, P, off)
+    return dict(bpm=T, period=float(P), offset=float(off), downbeat=phase, press_R=float(R))
 
 
 def analyse_track(path):
@@ -165,7 +201,7 @@ def analyse_clip(path, bpm_hint=None):
 
 # ======================================================================= clip access
 class Clip:
-    def __init__(self, path, bpm_hint=None, shift=0):
+    def __init__(self, path, bpm_hint=None, shift=0, replay=None):
         self.shift = shift  # manual downbeat correction in beats
         self.path = os.path.join(HERE, path)
         self.info = analyse_clip(self.path, bpm_hint)
@@ -174,10 +210,13 @@ class Clip:
         self.period = self.info["period"]
         self.fps = self.info["fps"]
         self.track = np.array(self.info["track"])
+        self.presses = np.array([])
         self.cap = cv2.VideoCapture(self.path)
         self.n_frames = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
         self.pos = -1
         self.cache = collections.OrderedDict()
+        if replay:
+            self._use_replay(replay)
 
     @property
     def audio(self):
@@ -185,11 +224,11 @@ class Clip:
             self._audio = extract_audio(self.path)
         return self._audio
 
-    def downbeat_near(self, t):
+    def downbeat_near(self, t, bars=1):
         """Snap a time to the nearest downbeat of the beat grid."""
         i = self.info
         first = i["offset"] + (i["downbeat"] + self.shift) * self.period
-        bar = 4 * self.period
+        bar = 4 * self.period * bars
         return first + round((t - first) / bar) * bar
 
     def frame(self, t):
@@ -212,6 +251,38 @@ class Clip:
             self.cache.popitem(last=False)
         return f
 
+    def _use_replay(self, rc):
+        """Drive the camera with the real cursor from the .osr replay.
+        rc: {"file": ..., "offset": map time (s) at video t=0, "rate": 1.5 for DT}"""
+        import osr
+        from scipy.ndimage import gaussian_filter1d
+        o = osr.parse(os.path.join(HERE, rc["file"]))
+        fr = np.array(o["frames"], float)
+        rate = rc.get("rate", 1.5 if any(m in osr.mods_str(o["mods"]) for m in ("DT", "NC")) else 1.0)
+        n = max(self.n_frames, len(self.track))
+        vt = np.arange(n) / self.fps
+        mt = rc["offset"] * 1000 + vt * 1000 * rate
+        s = 0.8 * self.h / 384  # danser/osu! playfield: 80% of the height, centred
+        sx = (self.w - 512 * s) / 2 + np.interp(mt, fr[:, 0], fr[:, 1]) * s
+        sy = (self.h - 384 * s) / 2 + np.interp(mt, fr[:, 0], fr[:, 2]) * s
+        self.cursor = np.stack([sx, sy], 1)
+        sig = self.fps * rc.get("smooth", 0.07)
+        self.track = np.stack([gaussian_filter1d(sx, sig), gaussian_filter1d(sy, sig)], 1)
+        z = fr[:, 3].astype(int)
+        presses = []
+        for mask in (5, 10):
+            k = (z & mask) > 0
+            presses.append(fr[1:, 0][k[1:] & ~k[:-1]])
+        pt = (np.sort(np.concatenate(presses)) - rc["offset"] * 1000) / 1000 / rate
+        self.presses = pt[(pt >= 0) & (pt <= vt[-1])]
+        self.replay = o
+        if len(self.presses) > 40 and rc.get("beats_from_replay", True):
+            info = beats_from_presses(self.audio, self.presses, self.period)
+            print(f"  {os.path.basename(self.path)}: replay beat grid {info['bpm']:.2f} bpm, offset "
+                  f"{info['offset'] * 1000:.1f} ms, downbeat {info['downbeat']} (fit {info['press_R']:.2f})")
+            self.info = dict(self.info, **info)
+            self.period = info["period"]
+
     def centre(self, t):
         i = int(np.clip(round(t * self.fps), 0, len(self.track) - 1))
         return self.track[i]
@@ -232,21 +303,27 @@ class Seg:
         return float(self.smap[i])
 
 
+def pulse(pc, clip):
+    """Edit beats per audio beat: very fast songs (DT!) are cut in half time."""
+    return pc.get("pulse", 2 if 60 / clip.period > 200 else 1)
+
+
 def build_timeline(cfg, clips):
     pcs = cfg["parts"]
-    starts = [clips[pc["clip"]].downbeat_near(pc["start"]) for pc in pcs]
+    starts = [clips[pc["clip"]].downbeat_near(pc["start"]) for pc in pcs]  # bar lines of the audio
     segs, t = [], 0.0
     # hook: the bars right before part 1 in part 1's own song, so the drop lands naturally
     hc = cfg["hook"]
     c0 = clips[pcs[0]["clip"]]
     P0 = c0.period
+    P0 *= pulse(pcs[0], c0)
     hb = hc.get("beats", 4)
     smap = starts[0] - hb * P0 + np.arange(S.n_samples(hb * P0)) / SR
     segs.append(Seg("hook", "hook", c0, t, smap, hc, P0))
     t += segs[-1].dur
     for k, pc in enumerate(pcs):
         clip = clips[pc["clip"]]
-        P = clip.period
+        P = clip.period * pulse(pc, clip)
         s0 = starts[k]
         n = S.n_samples(pc["beats"] * P)
         smap = s0 + np.arange(n) / SR
@@ -403,7 +480,7 @@ def make_ctx(cfg, preview):
     ctx.k = ctx.W / 1080
     ctx.clips = {}
     for name, cc in cfg["clips"].items():
-        ctx.clips[name] = Clip(cc["file"], cc.get("bpm"), cc.get("downbeat_shift", 0))
+        ctx.clips[name] = Clip(cc["file"], cc.get("bpm"), cc.get("downbeat_shift", 0), cc.get("replay"))
     segs = build_timeline(cfg, ctx.clips)
     ctx.src_start, ctx.grade_name = {}, {}
     for s in segs:
