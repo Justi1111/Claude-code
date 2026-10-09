@@ -116,73 +116,16 @@
       "pulse": 2,
       "out": "tapestop",
       "cuts_from": 5,
-      "cards": [
-        {
-          "badge": "300",
-          "badge_color": [
-            80,
-            180,
-            255
-          ],
-          "title": "GREAT",
-          "value": "2838",
-          "value_color": [
-            90,
-            200,
-            255
-          ]
-        },
-        {
-          "badge": "100",
-          "badge_color": [
-            110,
-            230,
-            120
-          ],
-          "title": "OK",
-          "value": "18",
-          "value_color": [
-            140,
-            240,
-            150
-          ]
-        },
-        {
-          "badge": "50",
-          "badge_color": [
-            255,
-            205,
-            70
-          ],
-          "title": "MEH",
-          "value": "0"
-        },
-        {
-          "badge": "X",
-          "badge_color": [
-            255,
-            70,
-            90
-          ],
-          "title": "MISS",
-          "value": "0",
-          "value_color": [
-            255,
-            100,
-            120
-          ]
-        }
-      ],
       "word": "UNTOUCHABLE",
       "word_sub": "99.58%  //  NO MOD",
       "tag": {
         "title": "EYE OF ETERNITY",
         "stats": "NM  //  99.58%  //  4094x FC",
         "beats": [
-          5.2,
-          8.8
+          0.5,
+          4.5
         ],
-        "y": 0.12
+        "y": 0.1
       }
     },
     {

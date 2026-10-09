@@ -29,6 +29,13 @@ def view_quad(clip, st, view, aspect):
     ch = cw / aspect
     pfc = np.array([px + pw / 2, py + ph / 2])
     c = pfc * (1 - view.follow) + clip.centre(st) * view.follow + np.array([view.ox, view.oy]) * pw
+    cur = clip.cursor_at(st) if hasattr(clip, "cursor_at") else None
+    if cur is not None and view.follow > 0:  # never let the real cursor leave the shot
+        for i, half in ((0, cw / 2), (1, ch / 2)):
+            lim = half * 0.72
+            d = cur[i] - c[i]
+            if abs(d) > lim:
+                c[i] = cur[i] - math.copysign(lim, d)
     if cw < sw:
         c[0] = np.clip(c[0], cw / 2, sw - cw / 2)
     if ch < sh:
@@ -117,10 +124,12 @@ def make_grade(spec):
     con, gam = spec.get("contrast", 1.2), spec.get("gamma", 1.0)
     if t == "duo":
         lut = _duo_lut(tuple(spec["dark"]), tuple(spec["mid"]), tuple(spec["light"]), con, gam)
+        mix = spec.get("mix", 1.0)
 
         def f(img):
             g = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            return cv2.LUT(cv2.merge([g, g, g]), lut)
+            d = cv2.LUT(cv2.merge([g, g, g]), lut)
+            return d if mix >= 1 else cv2.addWeighted(d, mix, img, 1 - mix, 0)
         return f
     if t == "bw":
         lut = _tint_lut(tuple(spec.get("tint", (1, 1, 1))), con, spec.get("lift", 0.0), gam)

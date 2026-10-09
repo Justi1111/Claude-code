@@ -29,15 +29,15 @@ from layers import View
 
 # ======================================================================= palettes
 GRADE_SPECS = {
-    "red": {"type": "duo", "dark": (16, 0, 6), "mid": (225, 22, 50), "light": (255, 238, 238), "contrast": 1.35},
+    "red": {"type": "duo", "dark": (16, 0, 6), "mid": (225, 22, 50), "light": (255, 238, 238), "contrast": 1.35, "mix": 0.72},
     "red_hard": {"type": "duo", "dark": (0, 0, 0), "mid": (150, 0, 25), "light": (255, 255, 255), "contrast": 1.9},
     "violet": {"type": "tint", "tint": (1.06, 0.78, 1.28), "sat": 1.35, "contrast": 1.3, "lift": -0.03},
-    "cyan": {"type": "duo", "dark": (0, 8, 22), "mid": (0, 150, 235), "light": (225, 252, 255), "contrast": 1.35},
-    "magenta": {"type": "duo", "dark": (18, 0, 20), "mid": (250, 0, 160), "light": (255, 228, 250), "contrast": 1.35},
-    "ice": {"type": "duo", "dark": (2, 10, 22), "mid": (50, 140, 195), "light": (218, 246, 255), "contrast": 1.3},
-    "ice_hot": {"type": "duo", "dark": (0, 6, 18), "mid": (0, 185, 255), "light": (240, 255, 255), "contrast": 1.45},
+    "cyan": {"type": "duo", "dark": (0, 8, 22), "mid": (0, 150, 235), "light": (225, 252, 255), "contrast": 1.35, "mix": 0.75},
+    "magenta": {"type": "duo", "dark": (18, 0, 20), "mid": (250, 0, 160), "light": (255, 228, 250), "contrast": 1.35, "mix": 0.75},
+    "ice": {"type": "duo", "dark": (2, 10, 22), "mid": (50, 140, 195), "light": (218, 246, 255), "contrast": 1.3, "mix": 0.7},
+    "ice_hot": {"type": "duo", "dark": (0, 6, 18), "mid": (0, 185, 255), "light": (240, 255, 255), "contrast": 1.45, "mix": 0.72},
     "gold": {"type": "tint", "tint": (1.28, 1.0, 0.66), "sat": 1.35, "contrast": 1.3, "lift": -0.02},
-    "gold_duo": {"type": "duo", "dark": (16, 8, 0), "mid": (230, 150, 22), "light": (255, 246, 215), "contrast": 1.35},
+    "gold_duo": {"type": "duo", "dark": (16, 8, 0), "mid": (230, 150, 22), "light": (255, 246, 215), "contrast": 1.35, "mix": 0.75},
     "bw": {"type": "bw", "contrast": 1.4, "tint": (0.92, 0.98, 1.06)},
 }
 ACCENT = {"record": (255, 40, 70), "reign": (185, 95, 255), "trophies": (0, 205, 255), "return": (255, 190, 40)}
@@ -361,8 +361,8 @@ def render_record(ctx, seg, t):
                   exit_u=ex, seed=22)
     play_tag(ctx, canvas, seg, b)
     # post
-    img = ctx.post.bloom(canvas, 0.7 + 3 * punch)
-    img = ctx.post.rgb_split(img, 3 * k + 24 * k * bar_env(b, P, 10) + 60 * k * ez)
+    img = ctx.post.bloom(canvas, 0.5 + 2 * punch)
+    img = ctx.post.rgb_split(img, 1.5 * k + 14 * k * bar_env(b, P, 12) + 60 * k * ez)
     if b < 0.6:
         img = ctx.post.zoom_blur(img, 0.07 * (1 - b / 0.6))
     if ez > 0.01:
@@ -409,12 +409,15 @@ def render_reign(ctx, seg, t):
     acc = ACCENT["reign"]
     st = seg.src(t)
     frame = clip.frame(st)
+    post = ctx.post
     gV, gC, gM = grade("violet"), grade("cyan"), grade("magenta")
     canvas = L.bg_gradient(W, H, (26, 0, 44), (0, 0, 0))
     gap = 10 * k
     bh = (H - 2 * gap) / 3
     ys = [0, bh + gap, 2 * (bh + gap)]
-    VT, VM, VB = View(2.6, 0.92), View(1.12, 0.4), View(2.2, 0.92, flip=True)
+    VT, VM, VB = View(1.5, 0.95), View(1.0, 0.3), View(1.5, 0.95, flip=True)
+    ww, wh = window_dims(ctx, 0.96)
+    wcy = H * 0.47
     if b < 7:
         col = ease_in_out_cubic(clamp01(b - 6))
         swap = ease_out_expo(clamp01((b - 4) / 0.45))
@@ -422,10 +425,13 @@ def render_reign(ctx, seg, t):
             enter = clamp01((b - 0.17 * i) / 0.5)
             ex = (1 - ease_out_expo(enter)) * W * (1 if i % 2 else -1)
             y0, y1 = ys[i], ys[i] + bh
-            if i == 1:
-                y0, y1 = lerp(ys[1], 0, col), lerp(ys[1] + bh, H, col)
-                v = View(lerp(1.12, 2.05, col) * (1 + 0.04 * beat_env(b, P, 12)), lerp(0.4, 0.85, col))
-                L.put_shot(canvas, frame, clip, st, v, L.rect_quad(ex, y0, ex + W, y1), gV)
+            if i == 1:  # the full-playfield band becomes the final window
+                y0, y1 = lerp(ys[1], wcy - wh / 2, col), lerp(ys[1] + bh, wcy + wh / 2, col)
+                x0, x1 = lerp(0, (W - ww) / 2, col) + ex, lerp(W, (W + ww) / 2, col) + ex
+                v = View(1.0 * (1 + 0.03 * beat_env(b, P, 12)), 0.3)
+                L.put_shot(canvas, frame, clip, st, v, L.rect_quad(x0, y0, x1, y1), gV)
+                if col > 0:
+                    L.quad_outline(canvas, L.rect_quad(x0, y0, x1, y1), acc, 4 * k)
             else:
                 dy = (-1 if i == 0 else 1) * bh * 1.3 * col
                 y0, y1 = y0 + dy, y1 + dy
@@ -449,52 +455,48 @@ def render_reign(ctx, seg, t):
                 g_ = ease_out_expo(clamp01((b - 0.45) / 0.4))
                 cv2.line(canvas, (int(W / 2 - W / 2 * g_), int(yl)), (int(W / 2 + W / 2 * g_), int(yl)),
                          (255, 255, 255), max(1, int(3 * k)), cv2.LINE_AA)
-    else:
-        v = View(2.05 * (1 + 0.06 * beat_env(b, P, 12)), 0.85, rot=roll_env(b, P, 4))
-        L.put_shot(canvas, frame, clip, st, v, full(ctx), gV)
-    # echo trails in the full-screen part
-    post = ctx.post
-    if b >= 7 and len(post.echo) >= 6:
-        e1 = cv2.multiply(post.echo[-3], (1.0, 0.35, 0.95, 0))
-        e2 = cv2.multiply(post.echo[-6], (1.0, 0.9, 0.2, 0))
-        canvas = cv2.max(canvas, cv2.max(cv2.convertScaleAbs(e1, alpha=0.75), cv2.convertScaleAbs(e2, alpha=0.5)))
-    post.echo.append(canvas.copy())
-    # typography
-    lab = cfg.get("label")
-    if lab:
-        typo.label(canvas, lab[0], lab[1], lab[2], (b - 0.55) * P, 56 * k, H * 0.1, k, acc, exit_u=5.5 * P, seed=31)
+    else:  # clean neon window: the whole playfield, gentle 3D sway on the beat
+        d = int(b // 4)
+        tg = [-7, 6, -6, 7]
+        prev = tg[(d - 1) % 4]
+        ry = lerp(prev, tg[d % 4], ease_out_back(((b - 4 * d) * P) / 0.4, 1.6))
+        dst = gfx.project_rect(ww, wh, W / 2, wcy, 1 + 0.025 * beat_env(b, P, 12), 3 * math.sin(t * 2.1), ry, 0,
+                               1900 * k)
+        L.put_shot(canvas, frame, clip, st, View(1.0, 0.3), dst, gV)
+        L.quad_outline(canvas, dst, acc, 4 * k)
+        L.brackets(canvas, dst, (44 + 30 * bar_env(b, P, 7)) * k, 18 * k, (255, 255, 255), 4 * k)
+    # typography (kept off the playfield)
     cc = cfg["counter"]
     c0, c1 = cc.get("beats", [1.2, 5.0])
     val, vel = typo.count_value(b * P, c0 * P, (c1 - c0) * P, cc.get("from", 1), cc["to"])
     land = (b - c1) * P
     out_e = clamp01((b - 5.6) / 0.35)
     a_c = clamp01((b - c0 + 0.3) / 0.3) * (1 - out_e)
-    cy = ys[1] + bh / 2
+    cy = ys[0] + bh * 0.42
     pop = 1 + 0.18 * dec(land, 11) if land >= 0 else 1.0
     right = typo.counter(canvas, val, W / 2 - 30 * k, cy, int(165 * k), "unb", (255, 255, 255), len(str(cc["to"])),
                          cc.get("prefix", ""), "", vel, int(12 * k), acc, lead_zeros=cc.get("lead_zeros", True),
-                         alpha=a_c, scale=pop,
-                         affix_size=int(70 * k), affix_color=acc, fps=ctx.fps)
+                         alpha=a_c, scale=pop, affix_size=int(70 * k), affix_color=acc, fps=ctx.fps)
     if land >= 0 and a_c > 0:
         plus = gfx.text_sprite(cc.get("after", "+"), int(150 * k), "unb", acc, glow=int(10 * k), glow_color=acc)
         gfx.blit(canvas, plus, right + plus.shape[1] * 0.35, cy - 6 * k, ease_out_back(land / 0.25, 3.0), 0, a_c)
         typo.outline_stack(canvas, f"{cc['to']}", land, W / 2 + 40 * k, cy, int(165 * k), "unb", acc, 4, 0.1,
                            max(2, int(3 * k)), 0.5, a_c)
-    typo.letters(canvas, cfg.get("caption", ""), (b - 2.0) * P, W / 2, cy + 135 * k, int(74 * k),
+    typo.letters(canvas, cfg.get("caption", ""), (b - 2.0) * P, W / 2, cy + 125 * k, int(66 * k),
                  "anton", (255, 255, 255), "rise", 0.022, 0.3, exit_u=(5.55 - 2.0) * P, exit_style="up", seed=32)
     if b >= 7:
         m1, m2 = cfg.get("marquee", ["MREKK  •  ", "OSU!  •  "])
         en = clamp01((b - 7) / 0.5)
-        typo.marquee(canvas, m1, t, W / 2, H * 0.74, -9, 380 * k, int(64 * k), "anton", (10, 0, 20), acc, enter=en)
-        typo.marquee(canvas, m2, t, W / 2, H * 0.80, 7, -320 * k, int(64 * k), "anton", acc, (255, 255, 255),
+        typo.marquee(canvas, m1, t, W / 2, H * 0.755, -7, 380 * k, int(58 * k), "anton", (10, 0, 20), acc, enter=en)
+        typo.marquee(canvas, m2, t, W / 2, H * 0.815, 6, -320 * k, int(58 * k), "anton", acc, (255, 255, 255),
                      enter=clamp01((b - 7.15) / 0.5))
-        typo.letters(canvas, cfg.get("big", ""), (b - 8) * P, W / 2, H * 0.36, int(170 * k), "anton",
+        typo.letters(canvas, cfg.get("big", ""), (b - 8) * P, W / 2, H * 0.205, int(150 * k), "anton",
                      (255, 255, 255), "scatter", 0.025, 0.35, glow=int(10 * k), glow_color=acc,
                      exit_u=(nb - 1 - 8) * P, exit_style="glitch", seed=33)
     play_tag(ctx, canvas, seg, b)
-    # post
-    img = post.bloom(canvas, 1.0)
-    rgb = 4 * k + 20 * k * bar_env(b, P, 10)
+    # post (light on the gameplay)
+    img = post.bloom(canvas, 0.55)
+    rgb = 1.5 * k + 10 * k * bar_env(b, P, 12)
     if b < 0.5:  # zoom-out entrance (answers the record's zoom-through)
         e = ease_out_expo(b / 0.5)
         L.speed_lines(img, (W / 2, H / 2), 1 - e, ctx.fi, k, 60, (220, 180, 255))
@@ -579,63 +581,79 @@ def render_trophies(ctx, seg, t):
     frame = clip.frame(st)
     post = ctx.post
     cut_b = cfg.get("cuts_from", 6)
+    cards = cfg.get("cards", [])
     canvas = np.zeros((H, W, 3), np.uint8)
     u_cut = 9.0
     if b < cut_b:
-        L.put_shot(canvas, frame, clip, st, View(1.95 * (1 + 0.03 * beat_env(b, P)), 0.6), full(ctx), grade("ice"))
-        canvas = L.dim(canvas, 0.5)
-        lab = cfg.get("label")
-        if lab:
-            typo.label(canvas, lab[0], lab[1], lab[2], (b - 0.3) * P, 56 * k, H * 0.1, k, acc,
-                       exit_u=(cut_b - 0.6) * P, seed=41)
-        cards = cfg["cards"]
-        gap = 205 * k
-        y0 = H * 0.47 - gap * (len(cards) - 1) / 2
-        for i, cd in enumerate(cards):
-            bi = 0.5 + 0.38 * i
-            if b < bi:
-                continue
-            spr = card_sprite(W, round(k, 3), cd["title"], cd.get("sub", ""), cd["value"], cd.get("badge", ""),
-                              tuple(cd.get("value_color", (255, 205, 80))),
-                              tuple(cd["badge_color"]) if "badge_color" in cd else None)
-            spr = shine(spr, (b - bi - 0.6) / 0.45)
-            p = (b - bi) / 0.45
-            ry = -100 * (1 - ease_out_back(p, 1.5)) + 4 * math.sin(t * 2.3 + i)
-            out = clamp01((b - (cut_b - 0.8) - 0.12 * i) / 0.5)
-            x = W / 2 + ease_in_expo(out) * W * 1.3
-            if out > 0:
-                spr = gfx.hblur(spr, 120 * k * out)
-            fy = 7 * k * math.sin(t * 3.1 + i * 1.3)
-            sc = 1.0 + 0.05 * dec((b - bi) * P, 10) + 0.025 * beat_env(b, P, 10)
-            dst = gfx.project_rect(spr.shape[1], spr.shape[0], x, y0 + i * gap + fy, sc,
-                                   3 * math.sin(t * 1.7 + i), ry, 0, 1400 * k)
-            gfx.warp_sprite(canvas, spr, dst, min(1, (b - bi) / 0.15))
+        if cards:  # optional card stack over dimmed gameplay
+            L.put_shot(canvas, frame, clip, st, View(1.95 * (1 + 0.03 * beat_env(b, P)), 0.6), full(ctx),
+                       grade("ice"))
+            canvas = L.dim(canvas, 0.5)
+            gap = 205 * k
+            y0 = H * 0.47 - gap * (len(cards) - 1) / 2
+            for i, cd in enumerate(cards):
+                bi = 0.5 + 0.38 * i
+                if b < bi:
+                    continue
+                spr = card_sprite(W, round(k, 3), cd["title"], cd.get("sub", ""), cd["value"], cd.get("badge", ""),
+                                  tuple(cd.get("value_color", (255, 205, 80))),
+                                  tuple(cd["badge_color"]) if "badge_color" in cd else None)
+                spr = shine(spr, (b - bi - 0.6) / 0.45)
+                p_ = (b - bi) / 0.45
+                ry = -100 * (1 - ease_out_back(p_, 1.5)) + 4 * math.sin(t * 2.3 + i)
+                out = clamp01((b - (cut_b - 0.8) - 0.12 * i) / 0.5)
+                x = W / 2 + ease_in_expo(out) * W * 1.3
+                if out > 0:
+                    spr = gfx.hblur(spr, 120 * k * out)
+                fy = 7 * k * math.sin(t * 3.1 + i * 1.3)
+                sc = 1.0 + 0.05 * dec((b - bi) * P, 10) + 0.025 * beat_env(b, P, 10)
+                dst = gfx.project_rect(spr.shape[1], spr.shape[0], x, y0 + i * gap + fy, sc,
+                                       3 * math.sin(t * 1.7 + i), ry, 0, 1400 * k)
+                gfx.warp_sprite(canvas, spr, dst, min(1, (b - bi) / 0.15))
+        else:  # clean ice window with the whole playfield, slow push-in, HUD frame
+            canvas[:] = L.bg_blur(frame, W, H, grade("ice"), 0.35)
+            ww, wh = window_dims(ctx, 0.95)
+            push = 1 + 0.05 * b / max(1.0, cut_b) + 0.02 * beat_env(b, P, 12)
+            dst = gfx.project_rect(ww, wh, W / 2, H * 0.47, push, 2 * math.sin(t * 1.6), 4 * math.sin(t * 1.1), 0,
+                                   1900 * k)
+            M = L.put_shot(canvas, frame, clip, st, View(1.0, 0.3), dst, grade("ice_hot"))
+            L.quad_outline(canvas, dst, (230, 250, 255), 3 * k)
+            L.brackets(canvas, dst, (40 + 30 * bar_env(b, P, 7)) * k, 18 * k, acc, 5 * k)
+            act = L.map_point(M, clip.centre(st))
+            for db in range(0, int(cut_b), 2):
+                L.shockwave(canvas, act, (b - db) * P, k, (170, 235, 255), 0.6, 0.4)
+            # a scanning line sweeping the window
+            sy = int(lerp(dst[0][1], dst[3][1], (b * 0.5) % 1))
+            cv2.line(canvas, (int(dst[0][0]), sy), (int(dst[1][0]), sy), (255, 240, 200), max(1, int(2 * k)),
+                     cv2.LINE_AA)
         if b < 0.5:  # slice-in entrance
             e = ease_out_expo(b / 0.5)
             canvas = post.slices(canvas, 9, [W * (1 - e) * (-1 if i % 2 else 1) for i in range(9)])
     else:
         ci = int((b - cut_b) * 2)
         u_cut = (b - cut_b - ci / 2) * P
-        views = [View(2.3, 0.9, rot=-5), View(3.1, 0.95, ox=0.05, rot=4, flip=True), View(2.0, 0.85, rot=7),
-                 View(3.4, 0.95, oy=-0.04, rot=-6)]
+        views = [View(1.9, 0.9, rot=-4), View(2.3, 0.95, ox=0.04, rot=3, flip=True), View(1.95, 0.85, rot=5),
+                 View(2.4, 0.95, oy=-0.03, rot=-5)]
         v = views[ci % 4]
-        v.zoom *= 1 + 0.08 * dec(u_cut, 9)
+        v.zoom *= 1 + 0.06 * dec(u_cut, 9)
         L.put_shot(canvas, frame, clip, st, v, full(ctx), grade("ice_hot"))
-        if ci % 4 == 0 and u_cut < 2.5 / ctx.fps:
+        if ci % 4 == 0 and u_cut < 1.5 / ctx.fps:
             canvas = cv2.bitwise_not(canvas)
         w = cfg.get("word", "UNTOUCHABLE")
-        ws = int(min(200 * k, W * 0.93 / max(1, len(w)) / 0.47))
-        typo.letters(canvas, w, (b - cut_b - 0.4) * P, W / 2 + 8 * k, H * 0.47 + 8 * k, ws, "anton", acc, "flicker",
+        ws = int(min(170 * k, W * 0.9 / max(1, len(w)) / 0.47))
+        wy = H * 0.19
+        typo.letters(canvas, w, (b - cut_b - 0.4) * P, W / 2 + 6 * k, wy + 6 * k, ws, "anton", acc, "flicker",
                      P / 8, 0.15, outline_only=True, stroke=max(2, int(3 * k)), seed=43)
-        typo.letters(canvas, w, (b - cut_b - 0.4) * P, W / 2, H * 0.47, ws, "anton", (255, 255, 255), "flicker",
+        typo.letters(canvas, w, (b - cut_b - 0.4) * P, W / 2, wy, ws, "anton", (255, 255, 255), "flicker",
                      P / 8, 0.15, glow=int(10 * k), glow_color=acc, seed=43)
-        typo.scramble(canvas, cfg.get("word_sub", "NO ONE CLOSE"), (b - cut_b - 1.6) * P, W / 2, H * 0.555,
-                      int(42 * k), "mono", acc, tracking=int(8 * k), seed=44)
+        if cfg.get("word_sub"):
+            typo.scramble(canvas, cfg["word_sub"], (b - cut_b - 1.6) * P, W / 2, wy + ws * 0.62, int(40 * k), "mono",
+                          acc, tracking=int(8 * k), seed=44)
     play_tag(ctx, canvas, seg, b)
     # tape stop: slow down, drain colour, wobble, black
     ts = clamp01(b - (nb - 1))
-    img = post.bloom(canvas, 0.8)
-    img = post.rgb_split(img, 4 * k + 22 * k * dec(u_cut, 12))
+    img = post.bloom(canvas, 0.5)
+    img = post.rgb_split(img, 1.5 * k + 14 * k * dec(u_cut, 14))
     if ts > 0:
         g = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         img = cv2.addWeighted(img, 1 - ts, cv2.merge([g, g, g]), ts, 0)
@@ -644,13 +662,13 @@ def render_trophies(ctx, seg, t):
         img = L.dim(img, 0.85 * ts)
         if ts > 0.75:
             img[:] = 0
-    return L.flash(img, max(0.25 * dec(u_cut, 14), 0.5 * dec(b * P, 8)))
+    return L.flash(img, max(0.2 * dec(u_cut, 16), 0.5 * dec(b * P, 8)))
 
 
 def sfx_trophies(seg):
     P, t0, cfg = seg.period, seg.t0, seg.cfg
     out = [(t0, "glitch", 0.6), (t0 + 0.3 * P, "swipe", 0.4), (t0 + 0.3 * P, "scramble", 0.25)]
-    for i in range(len(cfg["cards"])):
+    for i in range(len(cfg.get("cards", []))):
         bi = 0.6 + 0.5 * i
         out += [(t0 + bi * P, "whoosh", 0.45), (t0 + (bi + 0.6) * P, "ting", 0.4)]
     cut_b = cfg.get("cuts_from", 6)
@@ -719,9 +737,10 @@ def render_return(ctx, seg, t):
         e = ease_out_expo(u / (0.45 * P * 2))
         canvas = L.bg_blur(frame, W, H, gold, 0.5)
         ww, wh = window_dims(ctx)
-        x0, y0 = lerp((W - ww) / 2, 0, e), lerp(H * 0.44 - wh / 2, 0, e)
-        x1, y1 = lerp((W + ww) / 2, W, e), lerp(H * 0.44 + wh / 2, H, e)
-        v = View(lerp(1.0, 2.05, e) * (1 + 0.05 * beat_env(b, P)), lerp(0.3, 0.85, e), rot=roll_env(b, P, 3) * e)
+        fw, fh = W, W * 0.75
+        x0, y0 = lerp((W - ww) / 2, 0, e), lerp(H * 0.44 - wh / 2, H * 0.44 - fh / 2, e)
+        x1, y1 = lerp((W + ww) / 2, W, e), lerp(H * 0.44 + wh / 2, H * 0.44 + fh / 2, e)
+        v = View(1.0 * (1 + 0.04 * beat_env(b, P)), 0.3)
         M = L.put_shot(canvas, frame, clip, st, v, L.rect_quad(x0, y0, x1, y1), gold)
         act = L.map_point(M, clip.centre(st))
         L.shockwave(canvas, (W / 2, H * 0.44), u, k, (255, 220, 120), 1.6, 0.6)
@@ -743,8 +762,8 @@ def render_return(ctx, seg, t):
         if im.get("word"):
             typo.letters(canvas, im["word"], u - 0.4 * P, W / 2, H * 0.70, int(160 * k), "anton", (255, 255, 255),
                          "spin", 0.04, 0.4, exit_u=ex - 0.4 * P, exit_style="scatter", seed=55)
-        img = post.bloom(canvas, 1.1)
-        img = post.rgb_split(img, rgb + 40 * k * dec(u, 7))
+        img = post.bloom(canvas, 0.8)
+        img = post.rgb_split(img, 1.5 * k + 34 * k * dec(u, 8))
         img = post.zoom_blur(img, 0.08 * dec(u, 6))
         return L.flash(img, 0.95 * dec(u, 5), (255, 225, 150))
     if b < mont_b:  # ---------------- 3x3 grid
@@ -752,7 +771,7 @@ def render_return(ctx, seg, t):
         canvas = np.zeros((H, W, 3), np.uint8)
         g8 = 8 * k
         tw, th = (W - 4 * g8) / 3, (H - 4 * g8) / 3
-        zooms = [2.4, 2.0, 2.8, 2.2, 2.05, 2.1, 2.9, 2.3, 2.5]
+        zooms = [1.5, 1.3, 1.7, 1.4, 1.25, 1.35, 1.75, 1.45, 1.6]
         gnames = ["gold", "gold_duo", "bw"]
         coll = clamp01((b - (mont_b - 0.5)) / 0.5)
         ec = ease_in_expo(coll)
@@ -775,7 +794,7 @@ def render_return(ctx, seg, t):
                 cx, cy = cx + dx * 2.5 * ec, cy + dy * 2.5 * ec
             q = L.rect_quad(cx - w_ / 2, cy - h_ / 2, cx + w_ / 2, cy + h_ / 2)
             gn = "gold" if idx == 4 else gnames[idx % 3]
-            L.put_shot(canvas, frame, clip, st, View(zooms[idx] * (1 + 0.05 * beat_env(b, P)), 0.5,
+            L.put_shot(canvas, frame, clip, st, View(zooms[idx] * (1 + 0.05 * beat_env(b, P)), 0.85,
                                                     flip=idx % 2 == 1), q, grade(gn))
         img = post.bloom(canvas, 0.9)
         img = post.rgb_split(img, rgb + 20 * k * beat_env(b, P, 10))
@@ -797,7 +816,7 @@ def render_return(ctx, seg, t):
     typ = ci % 4
     build = clamp01((b - 12) / 4)
     if typ == 0:
-        L.put_shot(canvas, frame, mclip, mst, View(2.3 * (1 + 0.06 * dec(u_cut, 9)), 0.9, rot=-4), full(ctx), g)
+        L.put_shot(canvas, frame, mclip, mst, View(1.9 * (1 + 0.05 * dec(u_cut, 9)), 0.9, rot=-3), full(ctx), g)
     elif typ == 1:
         canvas[:] = L.bg_blur(frame, W, H, g, 0.45)
         ww, wh = window_dims(ctx)
@@ -807,11 +826,13 @@ def render_return(ctx, seg, t):
         L.quad_outline(canvas, dst, (255, 255, 255), 3 * k)
         L.brackets(canvas, dst, 50 * k, 18 * k, acc, 5 * k)
     elif typ == 2:
-        L.put_shot(canvas, frame, mclip, mst, View(1.95 * (1 + 0.05 * dec(u_cut, 9)), 0.75, rot=5, flip=ci % 3 == 0),
-                   full(ctx), g)
+        canvas[:] = L.bg_blur(frame, W, H, g, 0.45)
+        fw, fh = W, W * 0.75
+        L.put_shot(canvas, frame, mclip, mst, View(1.0 * (1 + 0.05 * dec(u_cut, 9)), 0.3, flip=ci % 3 == 0),
+                   L.rect_quad(0, H * 0.47 - fh / 2, W, H * 0.47 + fh / 2), g)
     else:
-        L.put_shot(canvas, frame, mclip, mst, View(2.7, 0.95), L.rect_quad(0, 0, W, H / 2 - 5 * k), g)
-        L.put_shot(canvas, frame, mclip, mst, View(2.7, 0.95, flip=True), L.rect_quad(0, H / 2 + 5 * k, W, H),
+        L.put_shot(canvas, frame, mclip, mst, View(1.3, 0.9), L.rect_quad(0, 0, W, H / 2 - 5 * k), g)
+        L.put_shot(canvas, frame, mclip, mst, View(1.3, 0.9, flip=True), L.rect_quad(0, H / 2 + 5 * k, W, H),
                    grade("bw"))
     words = cfg.get("words", [[8, "THE", "slam"], [9, "GREATEST", "drop"], [10.5, "OF ALL", "scatter"],
                               [12, "TIME.", "scale"]])
@@ -820,19 +841,19 @@ def render_return(ctx, seg, t):
         if not (wb <= b < nxt + 0.3):
             continue
         u = (b - wb) * P
-        size = int(min(330 * k, W * 0.92 / max(1, len(wtxt)) / 0.45))
-        sh = 18 * k * build
+        size = int(min(250 * k, W * 0.9 / max(1, len(wtxt)) / 0.45))
+        sh = 14 * k * build
         cx = W / 2 + sh * math.sin(t * 73)
-        cy = H * 0.44 + sh * math.cos(t * 61)
+        cy = H * 0.15 + sh * math.cos(t * 61)
         if wi == len(words) - 1:
             typo.outline_stack(canvas, wtxt, u, cx, cy, size, "anton", acc, 5, 0.1, max(2, int(4 * k)), 0.5)
         typo.letters(canvas, wtxt, u, cx, cy, size, "anton", (255, 255, 255), wst, 0.03, 0.28, glow=int(12 * k),
                      glow_color=acc, exit_u=(nxt - wb) * P if wi < len(words) - 1 else None, exit_style="scatter",
                      exit_dur=0.12, seed=60 + wi)
     play_tag(ctx, canvas, seg, b)
-    img = post.bloom(canvas, 0.9 + 0.5 * build)
-    img = zoom_canvas(img, 1 + 0.25 * build ** 2, rot=6 * build * math.sin(t * 9))
-    img = post.rgb_split(img, rgb + 26 * k * dec(u_cut, 12) + 30 * k * build)
+    img = post.bloom(canvas, 0.6 + 0.4 * build)
+    img = zoom_canvas(img, 1 + 0.12 * build ** 2, rot=3 * build * math.sin(t * 9))
+    img = post.rgb_split(img, 1.5 * k + 16 * k * dec(u_cut, 14) + 14 * k * build)
     if u_cut < 0.04 and ci >= 8:
         img = post.glitch(img, 0.6, ctx.fi)
     fl = max(0.3 * dec(u_cut, 14) * (0.6 + build), ease_in_expo((b - (nb - 0.4)) / 0.4))

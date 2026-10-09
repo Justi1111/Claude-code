@@ -282,7 +282,7 @@ class Clip:
         sx = (self.w - 512 * s) / 2 + np.interp(mt, fr[:, 0], fr[:, 1]) * s
         sy = (self.h - 384 * s) / 2 + np.interp(mt, fr[:, 0], fr[:, 2]) * s
         self.cursor = np.stack([sx, sy], 1)
-        sig = self.fps * rc.get("smooth", 0.07)
+        sig = self.fps * rc.get("smooth", 0.05)
         self.track = np.stack([gaussian_filter1d(sx, sig), gaussian_filter1d(sy, sig)], 1)
         z = fr[:, 3].astype(int)
         presses = []
@@ -298,6 +298,11 @@ class Clip:
                   f"{info['offset'] * 1000:.1f} ms, downbeat {info['downbeat']} (fit {info['press_R']:.2f})")
             self.info = dict(self.info, **info)
             self.period = info["period"]
+
+    def cursor_at(self, t):
+        if getattr(self, "cursor", None) is None:
+            return None
+        return self.cursor[int(np.clip(round(t * self.fps), 0, len(self.cursor) - 1))]
 
     def centre(self, t):
         i = int(np.clip(round(t * self.fps), 0, len(self.track) - 1))
