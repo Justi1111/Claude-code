@@ -115,35 +115,51 @@ def downbeat_phase(y, mono, period, off):
 
 
 def beats_from_presses(y, presses, period_hint):
-    """Beat grid from replay key presses (notes sit on 1/2 or 1/4 of the beat), with the
-    audio choosing which subdivision is the beat and where the bar line is."""
-    T0 = 60 / period_hint
-    cands = [T0 * r for r in (1, 1.5, 2 / 3, 2, 0.5, 4 / 3, 0.75)]
-    cands = [T for T in cands if 120 <= T <= 300]
-    best = None
-    for T in cands:
-        for Tf in T * (1 + np.linspace(-0.006, 0.006, 241)):
-            P = 60 / Tf
-            for div in (2, 4):
-                ph = np.exp(2j * np.pi * presses / (P / div)).mean()
-                if best is None or abs(ph) > best[0]:
-                    best = (abs(ph), Tf, div, np.angle(ph))
-    R, T, div, ang = best
-    P = 60 / T
-    sub = P / div
-    off_sub = (ang / (2 * np.pi)) * sub % sub
+    """Beat grid from replay key presses. Notes sit on 1/2 or 1/4 of the beat, so search
+    every tempo in 120..300 BPM for the grid that explains the presses best; the audio
+    breaks ties, picks which subdivision is the beat and finds the bar line."""
+    pt = np.asarray(presses)
+    Ts = np.arange(120, 300, 0.02)
+    scores = np.zeros((len(Ts), 2))
+    for j, div in enumerate((2, 4)):
+        sub = (60 / Ts) / div
+        for i0 in range(0, len(Ts), 1000):
+            ph = np.exp(2j * np.pi * pt[None, :] / sub[i0:i0 + 1000, None]).mean(1)
+            scores[i0:i0 + 1000, j] = np.abs(ph)
+    R = scores.max(1)
     mono = librosa.resample(y.mean(1), orig_sr=SR, target_sr=22050)
     env = librosa.onset.onset_strength(y=mono, sr=22050, n_fft=512, hop_length=64)
+    env = np.convolve(env, np.hanning(9) / np.hanning(9).sum(), mode="same")
     te = np.arange(len(env)) * 64 / 22050
     low = np.abs(S.lowpass(y.mean(1), 150, 4))
 
-    def score(o):
+    def audio_score(P, o):
         g = np.arange(o, len(y) / SR - 0.05, P)
         k = np.array([low[int(x * SR): int(x * SR) + int(0.04 * SR)].mean() for x in g])
         return np.interp(g, te, env).mean() / (env.mean() + 1e-9) + k.mean() / (low.mean() + 1e-9)
-    off = max((off_sub + j * sub for j in range(div)), key=score) % P
+    # candidate tempos: local maxima within 85 % of the best press fit
+    cands = []
+    for i in np.argsort(-R):
+        if R[i] < 0.85 * R.max() or len(cands) >= 8:
+            break
+        if all(abs(Ts[i] - c) > 1.0 for c in cands):
+            cands.append(Ts[i])
+    best = None
+    for T in cands:
+        P = 60 / T
+        div = (2, 4)[int(np.argmax(scores[int(round((T - 120) / 0.02)) if T < 300 else -1]))]
+        ph = np.exp(2j * np.pi * pt / (P / div)).mean()
+        sub = P / div
+        off_sub = (np.angle(ph) / (2 * np.pi)) * sub % sub
+        for j in range(div):
+            o = (off_sub + j * sub) % P
+            sc = abs(ph) * audio_score(P, o)
+            if best is None or sc > best[0]:
+                best = (sc, T, o, abs(ph))
+    _, T, off, Rb = best
+    P = 60 / T
     phase = downbeat_phase(y, mono, P, off)
-    return dict(bpm=T, period=float(P), offset=float(off), downbeat=phase, press_R=float(R))
+    return dict(bpm=T, period=float(P), offset=float(off), downbeat=phase, press_R=float(Rb))
 
 
 def analyse_track(path):
@@ -305,7 +321,7 @@ class Seg:
 
 def pulse(pc, clip):
     """Edit beats per audio beat: very fast songs (DT!) are cut in half time."""
-    return pc.get("pulse", 2 if 60 / clip.period > 200 else 1)
+    return pc.get("pulse", 2 if 60 / clip.period > 230 else 1)
 
 
 def build_timeline(cfg, clips):

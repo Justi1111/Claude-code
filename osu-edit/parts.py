@@ -124,6 +124,30 @@ def bg_type(canvas, text, t, y, speed, size, color, alpha=0.18, stroke=3):
         x += uw
 
 
+def play_tag(ctx, canvas, seg, b):
+    """Small tag with the play's real stats: accent bar, title rising, stats decoding."""
+    tg = seg.cfg.get("tag")
+    if not tg:
+        return
+    P, k = seg.period, ctx.k
+    b0, b1 = tg.get("beats", [1, seg.cfg["beats"] - 1])
+    if b < b0 or b > b1 + 2:
+        return
+    u, ex = (b - b0) * P, (b1 - b0) * P
+    x, y = ctx.W * tg.get("x", 0.06), ctx.H * tg.get("y", 0.12)
+    acc = ACCENT.get(seg.style, (255, 255, 255))
+    g = ease_out_expo(u / 0.25) * (1 - clamp01((u - ex) / 0.25))
+    if g > 0.01:
+        cv2.rectangle(canvas, (int(x), int(y - 48 * k)), (int(x + 7 * k), int(y - 48 * k + 100 * k * g)), acc[::-1], -1)
+    title = tg.get("title", "")
+    tsz = int(60 * k)
+    if title:
+        typo.letters(canvas, title, u - 0.05, x + 24 * k + gfx.text_layout(title, tsz, "anton")[1] / 2, y - 14 * k, tsz,
+                     "anton", (255, 255, 255), "rise", 0.02, 0.3, exit_u=ex, exit_style="up", seed=81)
+    typo.scramble(canvas, tg.get("stats", ""), u - 0.15, x + 24 * k, y + 38 * k, int(30 * k), "mono", acc, dur=0.4,
+                  exit_u=ex, seed=82, align="left")
+
+
 def window_dims(ctx, frac=0.92):
     ww = ctx.W * frac
     return ww, ww * 0.75
@@ -235,8 +259,8 @@ def render_hook(ctx, seg, t):
     if b >= 3.7:
         typo.outline_stack(canvas, word, (b - 3.7) * P, W / 2 + glyph_offset("M", fsz, "anton")[0] * 0,
                            H * 0.46 + glyph_offset("M", fsz, "anton")[1], fsz, "anton", (255, 60, 90), 4, 0.1, int(3 * k))
-    if b >= 3.15:
-        typo.scramble(canvas, cfg.get("sub", "THE STORY OF THE #1"), (b - 3.15) * P, W / 2, H * 0.57,
+    if b >= 3.15 and cfg.get("sub"):
+        typo.scramble(canvas, cfg["sub"], (b - 3.15) * P, W / 2, H * 0.57,
                       int(40 * k), "mono", (255, 255, 255), dur=0.35, tracking=int(5 * k), seed=5)
     img = ctx.post.bloom(canvas, 0.6)
     img = ctx.post.rgb_split(img, 3 * k + 26 * k * dec(u_cut, 12) + (30 * k * dec((b - 1) * P, 8) if b >= 1 else 0))
@@ -271,8 +295,9 @@ def render_record(ctx, seg, t):
     g = grade("red_hard" if frozen else "red")
     canvas = L.bg_gradient(W, H, (52, 0, 12), (4, 0, 2))
     for yy, spd in ((0.18, -110), (0.5, 150), (0.82, -130)):
-        bg_type(canvas, cfg.get("bg_word", "RECORD") + "  ", t, H * yy, spd * k, int(300 * k), (255, 50, 80), 0.12,
-                max(2, int(3 * k)))
+        if cfg.get("bg_word"):
+            bg_type(canvas, cfg["bg_word"] + "  ", t, H * yy, spd * k, int(300 * k), (255, 50, 80), 0.12,
+                    max(2, int(3 * k)))
     # swinging 3D card
     ww, wh = window_dims(ctx)
     cy = H * 0.425
@@ -308,12 +333,14 @@ def render_record(ctx, seg, t):
         L.shockwave(canvas, act, (b - db) * P, k, (255, 90, 110), 0.85)
         L.sparks(canvas, act, (b - db) * P, 100 + db, k, 22, (255, 120, 140), 1300, 0.45)
     L.speed_lines(canvas, act, 1.2 * ez, ctx.fi, k, 70, (255, 200, 210))
-    if frozen:
-        typo.stamp(canvas, cfg.get("stamp", "RECORD"), (b - fz0) * P, W / 2, cy, int(165 * k), acc, -9, k,
+    if frozen and cfg.get("stamp"):
+        typo.stamp(canvas, cfg["stamp"], (b - fz0) * P, W / 2, cy, int(cfg.get("stamp_size", 165) * k), acc, -9, k,
                    exit_u=(zt0 - fz0) * P)
     # typography
-    lab = cfg.get("label", ["01", "THE RECORD", "PP RECORD // STD"])
-    typo.label(canvas, lab[0], lab[1], lab[2], (b - 0.35) * P, 56 * k, H * 0.1, k, acc, exit_u=(zt0 - 0.3) * P, seed=11)
+    lab = cfg.get("label")
+    if lab:
+        typo.label(canvas, lab[0], lab[1], lab[2], (b - 0.35) * P, 56 * k, H * 0.1, k, acc, exit_u=(zt0 - 0.3) * P,
+                   seed=11)
     cc = cfg["counter"]
     c0, c1 = cc.get("beats", [1.0, 6.5])
     val, vel = typo.count_value(b * P, c0 * P, (c1 - c0) * P, cc.get("from", 0), cc["to"])
@@ -332,6 +359,7 @@ def render_record(ctx, seg, t):
                   (255, 255, 255), exit_u=ex, seed=21)
     typo.scramble(canvas, cfg.get("sub", ""), (b - 2.6) * P, W / 2, H * 0.843, int(31 * k), "mono", (255, 130, 145),
                   exit_u=ex, seed=22)
+    play_tag(ctx, canvas, seg, b)
     # post
     img = ctx.post.bloom(canvas, 0.7 + 3 * punch)
     img = ctx.post.rgb_split(img, 3 * k + 24 * k * bar_env(b, P, 10) + 60 * k * ez)
@@ -432,8 +460,9 @@ def render_reign(ctx, seg, t):
         canvas = cv2.max(canvas, cv2.max(cv2.convertScaleAbs(e1, alpha=0.75), cv2.convertScaleAbs(e2, alpha=0.5)))
     post.echo.append(canvas.copy())
     # typography
-    lab = cfg.get("label", ["02", "THE REIGN", "GLOBAL #1 // DAYS"])
-    typo.label(canvas, lab[0], lab[1], lab[2], (b - 0.55) * P, 56 * k, H * 0.1, k, acc, exit_u=5.5 * P, seed=31)
+    lab = cfg.get("label")
+    if lab:
+        typo.label(canvas, lab[0], lab[1], lab[2], (b - 0.55) * P, 56 * k, H * 0.1, k, acc, exit_u=5.5 * P, seed=31)
     cc = cfg["counter"]
     c0, c1 = cc.get("beats", [1.2, 5.0])
     val, vel = typo.count_value(b * P, c0 * P, (c1 - c0) * P, cc.get("from", 1), cc["to"])
@@ -443,24 +472,26 @@ def render_reign(ctx, seg, t):
     cy = ys[1] + bh / 2
     pop = 1 + 0.18 * dec(land, 11) if land >= 0 else 1.0
     right = typo.counter(canvas, val, W / 2 - 30 * k, cy, int(165 * k), "unb", (255, 255, 255), len(str(cc["to"])),
-                         cc.get("prefix", "DAY "), "", vel, int(12 * k), acc, lead_zeros=True, alpha=a_c, scale=pop,
+                         cc.get("prefix", ""), "", vel, int(12 * k), acc, lead_zeros=cc.get("lead_zeros", True),
+                         alpha=a_c, scale=pop,
                          affix_size=int(70 * k), affix_color=acc, fps=ctx.fps)
     if land >= 0 and a_c > 0:
         plus = gfx.text_sprite(cc.get("after", "+"), int(150 * k), "unb", acc, glow=int(10 * k), glow_color=acc)
         gfx.blit(canvas, plus, right + plus.shape[1] * 0.35, cy - 6 * k, ease_out_back(land / 0.25, 3.0), 0, a_c)
         typo.outline_stack(canvas, f"{cc['to']}", land, W / 2 + 40 * k, cy, int(165 * k), "unb", acc, 4, 0.1,
                            max(2, int(3 * k)), 0.5, a_c)
-    typo.letters(canvas, cfg.get("caption", "AS THE GLOBAL #1"), (b - 2.0) * P, W / 2, cy + 135 * k, int(74 * k),
+    typo.letters(canvas, cfg.get("caption", ""), (b - 2.0) * P, W / 2, cy + 135 * k, int(74 * k),
                  "anton", (255, 255, 255), "rise", 0.022, 0.3, exit_u=(5.55 - 2.0) * P, exit_style="up", seed=32)
     if b >= 7:
-        m1, m2 = cfg.get("marquee", ["GLOBAL #1  •  ", "1200+ DAYS  •  "])
+        m1, m2 = cfg.get("marquee", ["MREKK  •  ", "OSU!  •  "])
         en = clamp01((b - 7) / 0.5)
         typo.marquee(canvas, m1, t, W / 2, H * 0.74, -9, 380 * k, int(64 * k), "anton", (10, 0, 20), acc, enter=en)
         typo.marquee(canvas, m2, t, W / 2, H * 0.80, 7, -320 * k, int(64 * k), "anton", acc, (255, 255, 255),
                      enter=clamp01((b - 7.15) / 0.5))
-        typo.letters(canvas, cfg.get("big", "UNMATCHED"), (b - 8) * P, W / 2, H * 0.36, int(170 * k), "anton",
+        typo.letters(canvas, cfg.get("big", ""), (b - 8) * P, W / 2, H * 0.36, int(170 * k), "anton",
                      (255, 255, 255), "scatter", 0.025, 0.35, glow=int(10 * k), glow_color=acc,
                      exit_u=(nb - 1 - 8) * P, exit_style="glitch", seed=33)
+    play_tag(ctx, canvas, seg, b)
     # post
     img = post.bloom(canvas, 1.0)
     rgb = 4 * k + 20 * k * bar_env(b, P, 10)
@@ -495,7 +526,7 @@ def sfx_reign(seg):
 
 # ======================================================================= TROPHIES
 @lru_cache(maxsize=16)
-def card_sprite(W, k, title, sub, value, badge, value_rgb):
+def card_sprite(W, k, title, sub, value, badge, value_rgb, badge_rgb=None):
     w, h = int(W * 0.88), int(172 * k)
     img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
@@ -503,17 +534,21 @@ def card_sprite(W, k, title, sub, value, badge, value_rgb):
     d.rounded_rectangle((0, 0, w - 1, h - 1), r, fill=(16, 20, 30, 232), outline=(255, 205, 80, 255),
                         width=max(2, int(3 * k)))
     d.rounded_rectangle((0, 0, int(12 * k), h - 1), r // 2, fill=(255, 195, 50, 255))
-    bc = (255, 195, 50) if badge != "#1" else (0, 205, 255)
+    bc = tuple(badge_rgb) if badge_rgb else (255, 195, 50)
     cx, cy, br = int(96 * k), h // 2, int(52 * k)
     d.ellipse((cx - br, cy - br, cx + br, cy + br), fill=bc + (255,))
     d.ellipse((cx - br + 6 * k, cy - br + 6 * k, cx + br - 6 * k, cy + br - 6 * k), outline=(255, 255, 255, 160),
               width=max(1, int(2 * k)))
     d.text((cx, cy + 2), badge, font=gfx.font("unb", int((40 if len(badge) > 2 else 50) * k)), fill=(15, 15, 20, 255),
            anchor="mm")
-    d.text((int(172 * k), int(40 * k)), title, font=gfx.font("archivo", int(40 * k)), fill=(255, 255, 255, 255),
-           anchor="lm")
-    d.text((int(172 * k), int(106 * k)), sub, font=gfx.font("mono", int(31 * k)), fill=(255, 205, 80, 255),
-           anchor="lm")
+    if sub:
+        d.text((int(172 * k), int(40 * k)), title, font=gfx.font("archivo", int(40 * k)), fill=(255, 255, 255, 255),
+               anchor="lm")
+        d.text((int(172 * k), int(106 * k)), sub, font=gfx.font("mono", int(31 * k)), fill=(255, 205, 80, 255),
+               anchor="lm")
+    else:
+        d.text((int(172 * k), h // 2), title, font=gfx.font("archivo", int(52 * k)), fill=(255, 255, 255, 255),
+               anchor="lm")
     d.text((w - int(34 * k), h // 2 + int(4 * k)), value, font=gfx.font("anton", int(96 * k)),
            fill=tuple(value_rgb) + (255,), anchor="rm")
     return gfx.pil_to_bgra(img)
@@ -549,9 +584,10 @@ def render_trophies(ctx, seg, t):
     if b < cut_b:
         L.put_shot(canvas, frame, clip, st, View(1.95 * (1 + 0.03 * beat_env(b, P)), 0.6), full(ctx), grade("ice"))
         canvas = L.dim(canvas, 0.5)
-        lab = cfg.get("label", ["03", "THE TROPHIES", "2026 // 1V1 SEASON"])
-        typo.label(canvas, lab[0], lab[1], lab[2], (b - 0.3) * P, 56 * k, H * 0.1, k, acc, exit_u=(cut_b - 0.6) * P,
-                   seed=41)
+        lab = cfg.get("label")
+        if lab:
+            typo.label(canvas, lab[0], lab[1], lab[2], (b - 0.3) * P, 56 * k, H * 0.1, k, acc,
+                       exit_u=(cut_b - 0.6) * P, seed=41)
         cards = cfg["cards"]
         gap = 205 * k
         y0 = H * 0.47 - gap * (len(cards) - 1) / 2
@@ -559,8 +595,9 @@ def render_trophies(ctx, seg, t):
             bi = 0.5 + 0.38 * i
             if b < bi:
                 continue
-            spr = card_sprite(W, round(k, 3), cd["title"], cd["sub"], cd["value"], cd.get("badge", "1ST"),
-                              tuple(cd.get("value_color", (255, 205, 80))))
+            spr = card_sprite(W, round(k, 3), cd["title"], cd.get("sub", ""), cd["value"], cd.get("badge", ""),
+                              tuple(cd.get("value_color", (255, 205, 80))),
+                              tuple(cd["badge_color"]) if "badge_color" in cd else None)
             spr = shine(spr, (b - bi - 0.6) / 0.45)
             p = (b - bi) / 0.45
             ry = -100 * (1 - ease_out_back(p, 1.5)) + 4 * math.sin(t * 2.3 + i)
@@ -594,6 +631,7 @@ def render_trophies(ctx, seg, t):
                      P / 8, 0.15, glow=int(10 * k), glow_color=acc, seed=43)
         typo.scramble(canvas, cfg.get("word_sub", "NO ONE CLOSE"), (b - cut_b - 1.6) * P, W / 2, H * 0.555,
                       int(42 * k), "mono", acc, tracking=int(8 * k), seed=44)
+    play_tag(ctx, canvas, seg, b)
     # tape stop: slow down, drain colour, wobble, black
     ts = clamp01(b - (nb - 1))
     img = post.bloom(canvas, 0.8)
@@ -643,15 +681,18 @@ def render_return(ctx, seg, t):
         L.put_shot(canvas, frame, clip, st, View(1.0, 0.3), dst, grade("bw"))
         L.quad_outline(canvas, dst, (200, 200, 200), 2 * k)
         canvas = post.scanlines(canvas)
-        lost = cfg.get("lost", ["14.06.2026", "#1", "THRONE LOST", "cryshina takes #1"])
+        it = cfg.get("intro", {})
         ex = (lost_b - 0.2) * P
-        typo.scramble(canvas, lost[0], (b - 0.1) * P, W / 2, H * 0.12, int(56 * k), "mono", (255, 255, 255),
-                      exit_u=ex, seed=51)
+        strike_on = it.get("strike", False)
+        if it.get("top"):
+            typo.scramble(canvas, it["top"], (b - 0.1) * P, W / 2, H * 0.12, int(56 * k), "mono", (255, 255, 255),
+                          exit_u=ex, seed=51)
         u1 = (b - 0.4) * P
-        if u1 >= 0:
-            struck = b >= 1.6
+        if u1 >= 0 and it.get("big"):
+            struck = strike_on and b >= 1.6
             col = (255, 255, 255) if not struck else (150, 150, 150)
-            spr = gfx.text_sprite(lost[1], int(400 * k), "unb", col)
+            bsz = int(min(400 * k, W * 0.86 / max(1, len(it["big"])) / 0.8))
+            spr = gfx.text_sprite(it["big"], bsz, "unb", col)
             e = ease_out_cubic(u1 / 0.1)
             j = (10 * k * dec(u1, 16)) + (16 * k * dec((b - 1.6) * P, 14) if struck else 0)
             a = min(1, u1 / 0.05) * (1 - clamp01((b - (lost_b - 0.2)) / 0.2))
@@ -659,14 +700,17 @@ def render_return(ctx, seg, t):
             if struck and a > 0:
                 typo.strike(canvas, (W * 0.12, H * 0.47), (W * 0.88, H * 0.39), (b - 1.6) * P, 0.16,
                             (255, 30, 50), 30 * k)
-        typo.letters(canvas, lost[2], (b - 2.0) * P, W / 2, H * 0.735, int(130 * k), "anton", (255, 40, 60), "drop",
-                     0.035, 0.4, exit_u=(lost_b - 0.25 - 2.0) * P, exit_style="glitch", seed=52)
-        typo.scramble(canvas, lost[3], (b - 2.6) * P, W / 2, H * 0.80, int(40 * k), "mono", (190, 190, 190),
-                      exit_u=(lost_b - 0.25 - 2.6) * P, seed=53)
+        if it.get("word"):
+            typo.letters(canvas, it["word"], (b - 2.0) * P, W / 2, H * 0.70, int(130 * k), "anton",
+                         tuple(it.get("word_color", (235, 235, 235))), "drop", 0.035, 0.4,
+                         exit_u=(lost_b - 0.25 - 2.0) * P, exit_style="glitch", seed=52)
+        if it.get("small"):
+            typo.scramble(canvas, it["small"], (b - 2.6) * P, W / 2, H * 0.78, int(40 * k), "mono", (190, 190, 190),
+                          exit_u=(lost_b - 0.25 - 2.6) * P, seed=53)
         img = post.wobble(canvas, 3 * k, t)
-        rgb += 5 * k + 30 * k * dec((b - 1.6) * P, 10)
+        rgb += 5 * k + (30 * k * dec((b - 1.6) * P, 10) if strike_on else 18 * k * dec(u1, 10))
         img = post.rgb_split(img, rgb)
-        if 1.6 <= b < 1.75:
+        if strike_on and 1.6 <= b < 1.75:
             img = post.glitch(img, 0.7, ctx.fi)
         return img
     if b < grid_b:  # ---------------- gold impact: #1 again
@@ -684,16 +728,21 @@ def render_return(ctx, seg, t):
         L.speed_lines(canvas, (W / 2, H * 0.44), 1.1 * dec(u, 5), ctx.fi, k, 64, (255, 215, 140))
         for bb in range(int(lost_b), int(grid_b)):
             L.sparks(canvas, act, (b - bb) * P, 500 + bb, k, 30, (255, 210, 120), 1700, 0.5)
-        again = cfg.get("again", ["11.07.2026", "#1", "AGAIN"])
+        im = cfg.get("impact", {})
         ex = (grid_b - 0.25 - lost_b) * P
-        typo.scramble(canvas, again[0], u - 0.02, W / 2, H * 0.12, int(56 * k), "mono", acc, exit_u=ex, seed=54)
-        spr = gfx.text_sprite(again[1], int(400 * k), "unb", acc, glow=int(18 * k), glow_color=(255, 140, 0))
-        typo.outline_stack(canvas, again[1], u, W / 2, H * 0.43, int(400 * k), "unb", acc, 5, 0.12, max(2, int(4 * k)),
-                           0.6, 1 - clamp01((u - ex) / 0.15))
-        e2 = ease_out_cubic(u / 0.1)
-        gfx.blit(canvas, spr, W / 2, H * 0.43, 1 + 1.3 * (1 - e2), 0, min(1, u / 0.04) * (1 - clamp01((u - ex) / 0.15)))
-        typo.letters(canvas, again[2], u - 0.4 * P, W / 2, H * 0.70, int(160 * k), "anton", (255, 255, 255), "spin",
-                     0.04, 0.4, exit_u=ex - 0.4 * P, exit_style="scatter", seed=55)
+        fade = 1 - clamp01((u - ex) / 0.15)
+        if im.get("top"):
+            typo.scramble(canvas, im["top"], u - 0.02, W / 2, H * 0.12, int(56 * k), "mono", acc, exit_u=ex, seed=54)
+        if im.get("big"):
+            bsz = int(min(400 * k, W * 0.86 / max(1, len(im["big"])) / 0.8))
+            spr = gfx.text_sprite(im["big"], bsz, "unb", acc, glow=int(18 * k), glow_color=(255, 140, 0))
+            typo.outline_stack(canvas, im["big"], u, W / 2, H * 0.43, bsz, "unb", acc, 5, 0.12, max(2, int(4 * k)),
+                               0.6, fade)
+            e2 = ease_out_cubic(u / 0.1)
+            gfx.blit(canvas, spr, W / 2, H * 0.43, 1 + 1.3 * (1 - e2), 0, min(1, u / 0.04) * fade)
+        if im.get("word"):
+            typo.letters(canvas, im["word"], u - 0.4 * P, W / 2, H * 0.70, int(160 * k), "anton", (255, 255, 255),
+                         "spin", 0.04, 0.4, exit_u=ex - 0.4 * P, exit_style="scatter", seed=55)
         img = post.bloom(canvas, 1.1)
         img = post.rgb_split(img, rgb + 40 * k * dec(u, 7))
         img = post.zoom_blur(img, 0.08 * dec(u, 6))
@@ -780,6 +829,7 @@ def render_return(ctx, seg, t):
         typo.letters(canvas, wtxt, u, cx, cy, size, "anton", (255, 255, 255), wst, 0.03, 0.28, glow=int(12 * k),
                      glow_color=acc, exit_u=(nxt - wb) * P if wi < len(words) - 1 else None, exit_style="scatter",
                      exit_dur=0.12, seed=60 + wi)
+    play_tag(ctx, canvas, seg, b)
     img = post.bloom(canvas, 0.9 + 0.5 * build)
     img = zoom_canvas(img, 1 + 0.25 * build ** 2, rot=6 * build * math.sin(t * 9))
     img = post.rgb_split(img, rgb + 26 * k * dec(u_cut, 12) + 30 * k * build)
@@ -792,8 +842,9 @@ def render_return(ctx, seg, t):
 def sfx_return(seg):
     P, t0, cfg = seg.period, seg.t0, seg.cfg
     lost_b, grid_b, mont_b = cfg.get("again_at", 4), cfg.get("grid_at", 6), cfg.get("montage_at", 8)
-    out = [(t0 + 0.1 * P, "scramble", 0.3), (t0 + 0.4 * P, "stamp", 0.8), (t0 + 1.6 * P, "swipe", 0.7),
-           (t0 + 1.6 * P, "glitch", 0.5), (t0 + 2.0 * P, "stamp", 0.5), (t0 + lost_b * P, "impact", 1.0),
+    strike = [(t0 + 1.6 * P, "swipe", 0.7), (t0 + 1.6 * P, "glitch", 0.5)] if cfg.get("intro", {}).get("strike") else []
+    out = strike + [(t0 + 0.1 * P, "scramble", 0.3), (t0 + 0.4 * P, "stamp", 0.8), (t0 + 2.0 * P, "stamp", 0.5),
+           (t0 + lost_b * P, "impact", 1.0),
            (t0 + lost_b * P, "ting", 0.6), (t0 + (lost_b + 0.4) * P, "whoosh", 0.5), (t0 + lost_b * P, "scramble", 0.3)]
     out += [(t0 + (grid_b + 0.125 * i) * P, "tick", 0.45) for i in range(9)]
     out.append((t0 + (mont_b - 0.5) * P, "whoosh", 0.6))
@@ -843,8 +894,9 @@ def render_outro(ctx, seg, t):
     gfx.blit(canvas, edge, W / 2, cy, 1.0, 0, a_in)
     typo.scramble(canvas, cfg.get("sub", "1 OF 1"), u - 0.3, W / 2, H * 0.58, int(68 * k), "mono", (255, 255, 255),
                   dur=0.5, tracking=int(30 * k), seed=71)
-    typo.scramble(canvas, cfg.get("small", "#1 GLOBAL  //  2026"), u - 0.6, W / 2, H * 0.625, int(34 * k), "mono",
-                  (255, 200, 80), dur=0.4, seed=72)
+    if cfg.get("small"):
+        typo.scramble(canvas, cfg["small"], u - 0.6, W / 2, H * 0.625, int(34 * k), "mono", (255, 200, 80), dur=0.4,
+                      seed=72)
     end = seg.dur
     L.shockwave(canvas, (W / 2, cy), u - (end - 0.45), k, (255, 230, 160), 1.4, 0.45)
     L.speed_lines(canvas, (W / 2, cy), 0.8 * dec(u, 6), ctx.fi, k, 60, (255, 220, 150))

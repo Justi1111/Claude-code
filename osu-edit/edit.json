@@ -1,63 +1,253 @@
 {
   "output": "out/mrekk_edit.mp4",
-  "size": [1080, 1920],
+  "size": [
+    1080,
+    1920
+  ],
   "fps": 60,
   "sfx_gain": 1.0,
-
   "clips": {
-    "c1": {"file": "clips/demo1.mp4"},
-    "c2": {"file": "clips/demo2.mp4"},
-    "c3": {"file": "clips/demo3.mp4"},
-    "c4": {"file": "clips/demo4.mp4"}
+    "saveme": {
+      "file": "clips/danser_1256809.mp4",
+      "replay": {
+        "file": "replays/e410093b-solo-replay-osu_1256809_3423842048.osr",
+        "offset": 298.988,
+        "rate": 1.5
+      }
+    },
+    "crystalia": {
+      "file": "clips/danser_1475722.mp4",
+      "replay": {
+        "file": "replays/8cb49965-solo-replay-osu_1475722_6108359037.osr",
+        "offset": 88.034,
+        "rate": 1.5
+      }
+    },
+    "eye": {
+      "file": "clips/danser_5774158.mp4",
+      "replay": {
+        "file": "replays/c16cb98e-solo-replay-osu_5774158_7346217987.osr",
+        "offset": 130.551,
+        "rate": 1.0
+      }
+    },
+    "map172": {
+      "file": "clips/danser_5589237.mp4",
+      "replay": {
+        "file": "replays/d691de7b-solo-replay-osu_5589237_7312101167.osr",
+        "offset": 242.973,
+        "rate": 1.5
+      }
+    }
   },
-
   "hook": {
     "beats": 4,
     "word": "MREKK",
-    "sub": "THE STORY OF THE #1",
-    "flash": ["c2", "c3", "c4", "c1"]
+    "sub": "",
+    "flash": [
+      "crystalia",
+      "eye",
+      "map172",
+      "saveme"
+    ]
   },
-
   "parts": [
     {
-      "style": "record", "clip": "c1", "start": 5.1, "beats": 12, "out": "sweep",
-      "label": ["01", "THE RECORD", "PP RECORD // STD"],
-      "counter": {"to": 1760, "suffix": "PP", "beats": [1.0, 6.5]},
-      "caption": "SAVE ME [NIGHTMARE] +HDDT",
-      "sub": "STD PP RECORD  //  30.08.2024",
-      "freeze": 8, "stamp": "RECORD", "bg_word": "RECORD"
+      "style": "record",
+      "clip": "saveme",
+      "start": 5.478,
+      "beats": 12,
+      "pulse": 2,
+      "out": "sweep",
+      "counter": {
+        "to": 4292,
+        "suffix": "x",
+        "beats": [
+          1.0,
+          6.5
+        ]
+      },
+      "caption": "SAVE ME  +HDDT",
+      "sub": "98.20%  //  0 MISS",
+      "freeze": 8,
+      "stamp": "0 MISS",
+      "bg_word": "SAVE ME",
+      "stamp_size": 150
     },
     {
-      "style": "reign", "clip": "c2", "start": 3.05, "beats": 12, "out": "stutter",
-      "label": ["02", "THE REIGN", "GLOBAL #1 // DAYS"],
-      "counter": {"from": 1, "to": 1200, "prefix": "DAY ", "after": "+", "beats": [1.2, 5.0]},
-      "caption": "AS THE GLOBAL #1",
-      "marquee": ["GLOBAL #1  •  ", "1200+ DAYS  •  "],
-      "big": "UNMATCHED"
-    },
-    {
-      "style": "trophies", "clip": "c3", "start": 2.47, "beats": 12, "out": "tapestop",
-      "label": ["03", "THE TROPHIES", "2026 // 1V1 SEASON"],
-      "cuts_from": 6,
-      "cards": [
-        {"badge": "1ST", "title": "The Roundtable Open", "sub": "2026  //  GF 6 : 2", "value": "WIN"},
-        {"badge": "1ST", "title": "Lazer Grand Arena", "sub": "2026  //  31.05", "value": "WIN"},
-        {"badge": "1ST", "title": "COE 1v1", "sub": "2026  //  GF 6 : 0", "value": "6-0"},
-        {"badge": "#1", "title": "Global Rank", "sub": "RECLAIMED 11.07.2026", "value": "#1", "value_color": [0, 205, 255]}
+      "style": "reign",
+      "clip": "crystalia",
+      "start": 9.916,
+      "beats": 12,
+      "pulse": 1,
+      "out": "stutter",
+      "counter": {
+        "from": 0,
+        "to": 881,
+        "prefix": "",
+        "after": "x",
+        "lead_zeros": false,
+        "beats": [
+          1.0,
+          5.0
+        ]
+      },
+      "caption": "97.44%  //  0 MISS",
+      "marquee": [
+        "CRYSTALIA  •  +HDDT  •  ",
+        "405 BPM  •  881x  •  "
       ],
-      "word": "UNTOUCHABLE", "word_sub": "NO ONE CLOSE"
+      "big": "405 BPM",
+      "tag": {
+        "title": "CRYSTALIA +HDDT",
+        "stats": "97.44%  //  881x  //  0 MISS",
+        "beats": [
+          7,
+          11
+        ],
+        "y": 0.12
+      }
     },
     {
-      "style": "return", "clip": "c4", "start": 2.9, "beats": 16, "out": "cut",
-      "lost": ["14.06.2026", "#1", "THRONE LOST", "cryshina takes #1"],
-      "again": ["11.07.2026", "#1", "AGAIN"],
-      "again_at": 4, "grid_at": 6, "montage_at": 8,
-      "montage": ["c4", "c1", "c2", "c3"],
-      "words": [[8, "THE", "slam"], [9, "GREATEST", "drop"], [10.5, "OF ALL", "scatter"], [12, "TIME.", "scale"]]
+      "style": "trophies",
+      "clip": "eye",
+      "start": 3.965,
+      "beats": 10,
+      "pulse": 2,
+      "out": "tapestop",
+      "cuts_from": 5,
+      "cards": [
+        {
+          "badge": "300",
+          "badge_color": [
+            80,
+            180,
+            255
+          ],
+          "title": "GREAT",
+          "value": "2838",
+          "value_color": [
+            90,
+            200,
+            255
+          ]
+        },
+        {
+          "badge": "100",
+          "badge_color": [
+            110,
+            230,
+            120
+          ],
+          "title": "OK",
+          "value": "18",
+          "value_color": [
+            140,
+            240,
+            150
+          ]
+        },
+        {
+          "badge": "50",
+          "badge_color": [
+            255,
+            205,
+            70
+          ],
+          "title": "MEH",
+          "value": "0"
+        },
+        {
+          "badge": "X",
+          "badge_color": [
+            255,
+            70,
+            90
+          ],
+          "title": "MISS",
+          "value": "0",
+          "value_color": [
+            255,
+            100,
+            120
+          ]
+        }
+      ],
+      "word": "UNTOUCHABLE",
+      "word_sub": "99.58%  //  NO MOD",
+      "tag": {
+        "title": "EYE OF ETERNITY",
+        "stats": "NM  //  99.58%  //  4094x FC",
+        "beats": [
+          5.2,
+          8.8
+        ],
+        "y": 0.12
+      }
+    },
+    {
+      "style": "return",
+      "clip": "map172",
+      "start": 3.584,
+      "beats": 16,
+      "pulse": 2,
+      "out": "cut",
+      "again_at": 4,
+      "grid_at": 6,
+      "montage_at": 8,
+      "montage": [
+        "map172",
+        "saveme",
+        "crystalia",
+        "eye"
+      ],
+      "words": [
+        [
+          8,
+          "THE",
+          "slam"
+        ],
+        [
+          9,
+          "GREATEST",
+          "drop"
+        ],
+        [
+          10.5,
+          "OF ALL",
+          "scatter"
+        ],
+        [
+          12,
+          "TIME.",
+          "scale"
+        ]
+      ],
+      "tag": {
+        "title": "+HDDT",
+        "stats": "97.03%  //  2001x",
+        "beats": [
+          8.2,
+          15.2
+        ],
+        "y": 0.12
+      },
+      "intro": {
+        "top": "+HDDT",
+        "big": "258",
+        "word": "BPM"
+      },
+      "impact": {
+        "top": "97.03%",
+        "big": "2001x",
+        "word": "COMBO"
+      }
     }
   ],
-
-  "outro": {"dur": 1.7, "title": "MREKK", "sub": "1 OF 1", "small": "#1 GLOBAL  //  2026"},
-
+  "outro": {
+    "dur": 1.7,
+    "title": "MREKK",
+    "sub": "1 OF 1"
+  },
   "voiceover": []
 }
