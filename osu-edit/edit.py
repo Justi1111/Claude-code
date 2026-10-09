@@ -471,7 +471,7 @@ def render_audio(segs, cfg):
         fn = PARTS.SFX.get(seg.style)
         if not fn:
             continue
-        for ev in fn(seg):
+        for ev in list(fn(seg)) + PARTS.sfx_card(seg):
             t_ev, name, gain = ev[:3]
             dur = ev[3] if len(ev) > 3 else (4 * seg.period if name == "riser" else None)
             S.place(out, sound(name, dur) * gain * sfx_gain, S.n_samples(t_ev))

@@ -69,7 +69,7 @@
       "card": {
         "title": "SAVE ME",
         "mods": "+HDDT",
-        "pp": null,
+        "pp": 1530,
         "stats": "98.20%  //  4292x",
         "beats": [
           0.3,
@@ -86,12 +86,12 @@
       "out": "stutter",
       "marquee": [
         "TOP 2 PP RECORD  •  AIM PP RECORD  •  ",
-        "CRYSTALIA  •  1846PP  •  +HDDT  •  "
+        "CRYSTALIA  •  1857PP  •  +HDDT  •  "
       ],
       "card": {
         "title": "CRYSTALIA",
         "mods": "+HDDT",
-        "pp": 1846,
+        "pp": 1857,
         "badges": [
           "TOP 2 PP RECORD",
           "AIM PP RECORD"
@@ -114,7 +114,7 @@
       "card": {
         "title": "EYE OF ETERNITY",
         "mods": "NM",
-        "pp": null,
+        "pp": 1572,
         "badges": [
           "NM PP RECORD"
         ],
@@ -175,7 +175,7 @@
       "card": {
         "title": "DOWN",
         "mods": "+HDDT",
-        "pp": null,
+        "pp": 1345,
         "stats": "97.03%  //  2001x",
         "beats": [
           6.1,

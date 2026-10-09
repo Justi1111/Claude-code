@@ -598,18 +598,35 @@ def sfx_record(seg):
     P, t0, cfg = seg.period, seg.t0, seg.cfg
     nb = cfg["beats"]
     out = [(t0 + 0.35 * P, "swipe", 0.5)]
-    c0, c1 = cfg["counter"].get("beats", [1.0, 6.5])
-    to = cfg["counter"].get("to")
-    if cfg["counter"].get("live"):
-        pp = seg.clip.pp_at(seg.src(t0 + c1 * P))
-        to = pp if pp is not None else to
-    out += ticks(t0 + c0 * P, (c1 - c0) * P, cfg["counter"].get("from", 0), to or 0)
-    out.append((t0 + c1 * P, "pop", 0.8))
+    if cfg.get("counter"):
+        c0, c1 = cfg["counter"].get("beats", [1.0, 6.5])
+        to = cfg["counter"].get("to")
+        if cfg["counter"].get("live"):
+            pp = seg.clip.pp_at(seg.src(t0 + c1 * P))
+            to = pp if pp is not None else to
+        out += ticks(t0 + c0 * P, (c1 - c0) * P, cfg["counter"].get("from", 0), to or 0)
+        out.append((t0 + c1 * P, "pop", 0.8))
     out.append((t0 + 2.0 * P, "scramble", 0.3))
     fz0 = cfg.get("freeze")
     if fz0 is not None and cfg.get("stamp"):
         out += [(t0 + fz0 * P, "stamp", 1.0), (t0 + fz0 * P, "glitch", 0.5)]
     out.append((t0 + (nb - cfg.get("zoom_beats", 2)) * P, "whoosh", 0.6))
+    return out
+
+
+def sfx_card(seg):
+    card = seg.cfg.get("card")
+    if not card:
+        return []
+    P, t0 = seg.period, seg.t0
+    b0 = card.get("beats", [0.4, 0])[0]
+    tc = t0 + b0 * P
+    out = [(tc, "swipe", 0.4)]
+    if card.get("pp"):
+        out += ticks(tc + 0.25, 0.9, 0, card["pp"], 20)
+        out += [(tc + 1.15, "pop", 0.8), (tc + 1.15, "stamp", 0.35)]
+    for i, _ in enumerate(card.get("badges", [])):
+        out.append((tc + 1.15 + 0.18 * i, "ting", 0.45))
     return out
 
 
@@ -748,9 +765,11 @@ def sfx_reign(seg):
     P, t0, cfg = seg.period, seg.t0, seg.cfg
     out = [(t0 + 0.17 * i * P, "swipe", 0.45) for i in range(3)]
     out.append((t0 + 0.55 * P, "scramble", 0.25))
-    c0, c1 = cfg["counter"].get("beats", [1.2, 5.0])
-    out += ticks(t0 + c0 * P, (c1 - c0) * P, cfg["counter"].get("from", 1), cfg["counter"]["to"])
-    out += [(t0 + c1 * P, "pop", 0.8), (t0 + 4 * P, "swipe", 0.55), (t0 + 6 * P, "whoosh", 0.6),
+    if cfg.get("counter"):
+        c0, c1 = cfg["counter"].get("beats", [1.2, 5.0])
+        out += ticks(t0 + c0 * P, (c1 - c0) * P, cfg["counter"].get("from", 1), cfg["counter"]["to"])
+        out.append((t0 + c1 * P, "pop", 0.8))
+    out += [(t0 + 4 * P, "swipe", 0.55), (t0 + 6 * P, "whoosh", 0.6),
             (t0 + 7 * P, "swipe", 0.5), (t0 + 8 * P, "whoosh", 0.4)]
     return out
 
