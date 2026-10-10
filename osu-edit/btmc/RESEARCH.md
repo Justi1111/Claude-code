@@ -107,11 +107,30 @@ Edward "BTMC" Ling (раньше BeasttrollMC). Американец китай�
 | Первый 1000pp, 2024 | Клип есть (TikTok osumomentslive). | 🟡 |
 | Его TikTok-фразы | «You can't make this up...», «you STILL can't make this up...», «Am I... colorblind?» | 🟡 подписи его TikTok |
 
+### B2. Голос, проверено: его фразы из Twitch-клипов (расшифровка faster-whisper, сверено по таймкодам)
+
+| Год | Фраза (дословно) | Клип (дата) | Таймкод в клипе |
+|---|---|---|---|
+| 2019 | «Did I seriously just SS that first try? … history has just been written.» | «NEW TOP PLAY BY BEAST TROLL MC AKA ED POGGER CHAMPION» (24.11.2019) | 19.7–22.1, 45.1–47.3 |
+| 2020 | реакция на победу сборной США на OWC | «IDKE JOGGING WHILE USA WON OWC LOL» (06.12.2020) | ~25 |
+| 2021 | «If you've ever been passionate about anything, it doesn't have to be a game. … there are people who genuinely care about this» | «It is not just a game. (BTMC on mrekk crying after his team lost Perennial to lag)» (24.05.2021) | 30.7–35.4, 52.0–55.7 |
+| 2021 | 975pp, Imperial Circus Dead Decadence [Kurushimi]: «We did it.» (в оригинале с матом) | «900PP» (29.11.2021) | 3.1–5.1 |
+| 2022 | «Get ready and place now.» | «goated defense» (02.04.2022, r/place) | 22.6–24.4 |
+| 2022 | «…we've made our mark on Internet history together… a lot of us sacrifice a lot to be here because this meant something to them and that means a lot to me» | «osuplace in a nutshell» (04.04.2022) | 0.0–5.9, 38.5–46.0 |
+| 2022 | «The purpose of the roundtable is to make something sustainable» | «vod stuff» (11.07.2022, Roundtable I) | 14.5–17.3 |
+| 2022 | «Ladies and gentlemen, this is why he is the rank one player» (кастит mrekk на Roundtable) | «MREKK SHOWS EMOTION POG?!» (11.07.2022) | 20.1–24.4 |
+| 2024 | «There's no way, is that 1k?» (первый 1000pp-плей: 1116pp, Imperial Circus Dead Decadence – Jashin no Konrei…, 26.09.2024) | «5 days left to set a 1k or my hair gets eviscerated…» (27.09.2024) | 13.6–16.0 |
+| 2025 | «That's why I don't care about the PP… I care about the person behind it and the score itself» (та самая реакция на 1300pp toromivana) | «yeah» (25.02.2025) | 35.6–45.1 |
+| 2025 | «He's a hundred percent right, and I'm sorry for that. I'm sorry for the people who saw this clip…» (извинение в тот же день) | «omg!» (25.02.2025) | 13.7–25.0 |
+| 2025 | «I made the decision that the farm-a-thon ends tomorrow at 11:59 p.m. PST.» | «THE END» (12.05.2025) | 0–17 |
+
+Вывод по маю 2025: в тот же день, что и заголовок «retiring from competitive», он объявил конец своего farm-a-thon (марафона фарма pp). Скорее всего, «уход» касался именно этого гринда. Без полного видео это всё ещё ❓.
+
 ### C. Не берём или не подтвердилось
 
 - **FC/пасс The Big Black позже не найден.** Есть ролик «BTMC Challenges The Big Black» (~2025), но исход неизвестен. Если найдёшь, это идеальный финал «10 лет спустя».
 - **WYSI/727 придумал не он**, а Cookiezi (Blue Zenith) и Aireu. У BTMC только видео-объяснение.
-- **Причина «ухода из соревновательного» (05.2025) неизвестна.** Без проверки видео в эдит не ставим.
+- **«Уход из соревновательного» (05.2025)**: в тот же день он объявил конец farm-a-thon (см. B2). Точный смысл без полного видео ❓, в эдит не ставим.
 - Клип «KARMA» (550K просмотров, 2020): что в нём, не нашёл.
 - Грубые цитаты (твит про toromivana «put it on allah…», шутка Neuro-sama) не используем.
 
