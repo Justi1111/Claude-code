@@ -17,6 +17,8 @@ FONTS = {
     "archivo": (os.path.join(HERE, "fonts/ArchivoBlack-Regular.ttf"), None),
     "bebas": (os.path.join(HERE, "fonts/BebasNeue-Regular.ttf"), None),
     "mono": (os.path.join(HERE, "fonts/SpaceMono-Bold.ttf"), None),
+    "kr": (os.path.join(HERE, "fonts/NotoSansKR[wght].ttf"), b"Black"),
+    "kr_bold": (os.path.join(HERE, "fonts/NotoSansKR[wght].ttf"), b"Bold"),
     # inter (system)
     "black": (INTER + "InterDisplay-Black.otf", None),
     "black_i": (INTER + "InterDisplay-BlackItalic.otf", None),

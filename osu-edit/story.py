@@ -116,10 +116,11 @@ def vocals(path):
 
 # ------------------------------------------------------------------ geometry helpers
 def crop_of(src, crop):
-    """Clamp a crop rect [x, y, w, h] (source px) to the frame."""
+    """Crop rect [x, y, w, h] given in 1920x1080 reference pixels, scaled to the source and clamped."""
     if crop is None:
         return 0, 0, src.w, src.h
-    x, y, w, h = crop
+    sx, sy = src.w / 1920, src.h / 1080
+    x, y, w, h = crop[0] * sx, crop[1] * sy, crop[2] * sx, crop[3] * sy
     x, y = max(0, int(x)), max(0, int(y))
     return x, y, int(min(w, src.w - x)), int(min(h, src.h - y))
 
@@ -218,7 +219,7 @@ def draw_caption(ctx, canvas, voice, t):
         end = max(t_last + 0.03, min(end, voice["_next"] - 0.13))
     if "until" in voice:
         end = min(end, voice["until"])
-    if t < t_first - 0.05 or t > end + 0.1:
+    if t < t_first - 0.05 or t > end + 0.1 or t >= voice.get("_next", 1e9) - 0.02:
         return
     size = voice.get("size", 84)
     fname = voice.get("font", "black")
@@ -252,6 +253,15 @@ def draw_caption(ctx, canvas, voice, t):
                 gfx.blit(canvas, spr, (x + ww / 2) * k, (y + lift) * k, sc, 0, out_a * min(1.0, p * 2.5))
             x += ww + space
         y += lh
+    sub = voice.get("sub")
+    if sub and t >= t_first:
+        ssz = voice.get("sub_size", 40)
+        spr = gfx.text_sprite(sub, int(ssz * k), voice.get("sub_font", "kr_bold"), (190, 190, 205), int(4 * k), (8, 8, 14))
+        gfx.blit(canvas, spr, 540 * k, (y - lh / 2 + ssz * 0.9 + 6) * k, 1.0, 0, out_a * clamp01((t - t_first) / 0.2))
+    tag = voice.get("tag")
+    if tag and t >= t_first - 0.05:
+        spr = gfx.text_sprite(tag, int(24 * k), "mono", tuple(voice.get("tag_color", (160, 160, 175))))
+        gfx.blit(canvas, spr, 540 * k, (cy0 - (len(lines) - 1) * lh / 2 - size * 0.95) * k, 1.0, 0, out_a)
 
 
 # ------------------------------------------------------------------ chapter UI (rail + year)
@@ -282,7 +292,10 @@ def draw_rail(ctx, canvas, t):
     cv2.line(canvas, (int(x0 * k), int(y * k)), (int(xp * k), int(y * k)), acc[::-1], max(2, int(5 * k)),
              cv2.LINE_AA)
     L.glow_dot(canvas, (xp * k, y * k), 16 * k, acc, 0.9 * a)
-    cv2.circle(canvas, (int(xp * k), int(y * k)), max(2, int(8 * k)), (255, 255, 255), -1, cv2.LINE_AA)
+    if rail.get("playhead") == "fish":
+        draw_fish(canvas, xp * k, (y - 2 + 3 * math.sin(t * 7)) * k, 1.0 * k, acc, t)
+    else:
+        cv2.circle(canvas, (int(xp * k), int(y * k)), max(2, int(8 * k)), (255, 255, 255), -1, cv2.LINE_AA)
     for yy, align in ((y0, -1), (y1, 1)):
         spr = gfx.text_sprite(str(yy), int(26 * k), "mono", (170, 170, 185))
         x = x0 if align < 0 else x1
@@ -299,6 +312,21 @@ def draw_rail(ctx, canvas, t):
         tw = gfx.text_layout(title, ts, "unb")[1]
         typo.letters(canvas, title, tu, rail["year_x"] * k + 22 * k + tw / 2, (rail["year_y"] + 96) * k, ts, "unb",
                      tcol, style="rise", stagger=0.018, dur=0.32, alpha=a * ya, seed=len(title))
+
+
+def draw_fish(canvas, cx, cy, k, color, t):
+    """Tiny tuna: body ellipse, wagging tail, eye. Faces right."""
+    wag = math.sin(t * 16) * 5 * k
+    body_w, body_h = int(26 * k), int(12 * k)
+    tail = np.int32([[cx - 22 * k, cy], [cx - 38 * k, cy - 11 * k + wag], [cx - 38 * k, cy + 11 * k + wag]])
+    col = color[::-1]
+    cv2.fillConvexPoly(canvas, tail, col, cv2.LINE_AA)
+    cv2.ellipse(canvas, (int(cx), int(cy)), (body_w, body_h), 0, 0, 360, col, -1, cv2.LINE_AA)
+    fin = np.int32([[cx - 4 * k, cy - 10 * k], [cx + 8 * k, cy - 20 * k], [cx + 10 * k, cy - 9 * k]])
+    cv2.fillConvexPoly(canvas, fin, col, cv2.LINE_AA)
+    cv2.ellipse(canvas, (int(cx + 4 * k), int(cy + 3 * k)), (int(16 * k), int(5 * k)), 0, 0, 180, (255, 255, 255), -1,
+                cv2.LINE_AA)
+    cv2.circle(canvas, (int(cx + 15 * k), int(cy - 3 * k)), max(1, int(3 * k)), (20, 20, 20), -1, cv2.LINE_AA)
 
 
 # ------------------------------------------------------------------ keyframe tracks
@@ -423,10 +451,19 @@ def draw_shot(ctx, canvas, shot, t):
     drift = shot.get("drift", 0.02) * u            # slow push-in
     beat = ctx.tl.get("beat")
     pulse = 0.0
-    if beat and shot.get("pulse", True):
-        ph = ((t - ctx.tl.get("beat0", 0)) / beat) % 1.0
-        pulse = math.exp(-ph * 9) * 0.012
+    if shot.get("pulse", True):
+        bt = ctx.tl.get("beat_times")
+        if bt is not None:
+            i = int(np.searchsorted(bt, t, "right")) - 1
+            if i >= 0:
+                pulse = math.exp(-(t - bt[i]) * 18) * 0.014
+        elif beat:
+            ph = ((t - ctx.tl.get("beat0", 0)) / beat) % 1.0
+            pulse = math.exp(-ph * 9) * 0.012
     if lay == "full":
+        if shot.get("crop") is not None:
+            x, y, w, h = crop_of(src, shot["crop"])
+            frame = frame[y:y + h, x:x + w]
         img = cover(frame, ctx.W, ctx.H, *shot.get("focus", (0.5, 0.5)), zoom=shot.get("zoom", 1.0) * (1 + drift))
         if g:
             img = g(img)
@@ -626,6 +663,11 @@ def render_audio(tl, total):
         e_blk[i] = cur
     env[: len(e_blk) * blk] = np.repeat(e_blk, blk)
     gain = 10 ** (duck_db * env / 20)
+    carve = tl.get("duck_carve")          # notch the vocal band of the music while someone talks
+    if carve:
+        band = S.bandpass(music.astype(np.float64), carve.get("lo", 500), carve.get("hi", 4000), 2)
+        g = 10 ** (carve.get("db", -9) / 20)
+        music = music - (band * (1 - g) * env[:, None]).astype(np.float32)
     mix = music * gain[:, None] + voice + sfx
     mix = S.master(mix[: int(total * SR)], drive=1.3, ceiling=0.95)
     return mix.astype(np.float32)
