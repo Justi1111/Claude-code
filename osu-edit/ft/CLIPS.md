@@ -5,6 +5,16 @@
 Всё, включая клипы без пометок, есть в `clips_index.tsv`: 1020 клипов с канала + выборка клипов трансляции osu!.
 
 
+## Куски из сохранившихся записей стримов (VOD)
+
+Этого нет среди клипов: вырезано из полных записей, которые ещё лежат у него на Twitch.
+
+- ★ `00_2017_start_and_ban/2017-10-20_VOD_im_not_a_hacker_handcam.mp4` — 2017.10.20 I'm Not a Hacker. (VOD) · [https://www.twitch.tv/videos/187837505](https://www.twitch.tv/videos/187837505) · 0:00:00–0:01:30
+- ★ `06_owc2021_and_army/2021-11-27_VOD_shaved_head_forget_english_in_army.mp4` — might be my last stream (VOD) · [https://www.twitch.tv/videos/1218413241](https://www.twitch.tv/videos/1218413241) · 2:24:30–2:27:05
+- ★ `06_owc2021_and_army/2021-11-27_VOD_farewell_see_ya_in_one_year_and_a_half.mp4` — might be my last stream (VOD) · [https://www.twitch.tv/videos/1218413241](https://www.twitch.tv/videos/1218413241) · 3:01:40–3:03:31
+- ★ `06_owc2021_and_army/2021-11-27_VOD_tb_lost_team_voice_go_to_army_safely.mp4` — might be my last stream (VOD) - team voice after TB loss · [https://www.twitch.tv/videos/1218413241](https://www.twitch.tv/videos/1218413241) · 1:46:25–1:49:40
+- ★ `06_owc2021_and_army/2021-11-27_VOD_team_voice_karuna_and_tuna.mp4` — might be my last stream (VOD) - team voice · [https://www.twitch.tv/videos/1218413241](https://www.twitch.tv/videos/1218413241) · 1:50:12–1:51:00
+
 ## 2017 — начало, бан и «I'm Not a Hacker»
 
 Всего клипов в периоде: 5. Ниже: ★ отобранные, затем самые просматриваемые и разговорные.
@@ -26,6 +36,7 @@
 
 - ★ **2018-01-05** · 44 просм. · 30 с · «[FlyingTuna/CamO] Hello :D» · [ссылка](https://www.twitch.tv/flyingtuna/clip/InquisitiveRoundHyenaBlargNaut)
   - файл: `01_2018_mouse_to_tablet/2018-01-05_camo_hello_mouse_era.mp4`
+  - ja/sm: [7s] 思い出して君の [9s] 君の全然全然世界 [11s] B-SMEDIA
 - ★ **2018-01-24** · 3 946 просм. · 33 с · «mouse god» · [ссылка](https://www.twitch.tv/flyingtuna/clip/PhilanthropicNiceKangarooKreygasm)
   - файл: `01_2018_mouse_to_tablet/2018-01-24_mouse_god.mp4`
 - ★ **2018-02-11** · 6 976 просм. · 30 с · «VOLCANIC JUMPS» · [ссылка](https://www.twitch.tv/flyingtuna/clip/SucculentCloudyMouseSquadGoals)
@@ -45,6 +56,7 @@
   - en/sm: [9s] What the fuck I didn't hit all of that with even mouse, but I did it on [20s] Five hours tablet. What the fuck and I have to switch to tablet. I'm scared. I really scared. What the fuck this [37s] improvement [38s] What the fuck I [41s] Just use tablet for five hours [44s] Just five hours. What the fuck?
 - ★ **2018-03-31** · 78 просм. · 50 с · «Please don't switch PepeHands» · [ссылка](https://www.twitch.tv/flyingtuna/clip/ExpensiveTalentedVanillaAliens)
   - файл: `01_2018_mouse_to_tablet/2018-03-31_please_dont_switch.mp4`
+  - en/sm: [10s] What the fuck I didn't hit all of that with even mouse, but I did it on [21s] Five hours tablet. What the fack am I have to switch to tablet? I'm scared. I really scared. What's the fuck this [38s] improvement [39s] What the Fack I [42s] Just use tablet for five hours [45s] Just five hours. What The Fack
 - ★ **2018-06-08** · 24 525 просм. · 11 с · «FLYINGTUNA HITS THE JUMPS WTF» · [ссылка](https://www.twitch.tv/flyingtuna/clip/BoxyUnsightlyHornetAMPEnergyCherry)
   - файл: `01_2018_mouse_to_tablet/2018-06-08_hits_the_jumps_wtf.mp4`
 - ★ **2018-06-15** · 7 731 просм. · 28 с · «Flying Tuna 1 Miss Eyes Half Closed» · [ссылка](https://www.twitch.tv/flyingtuna/clip/ShortHorribleSlothShadyLulu)
@@ -62,10 +74,13 @@
   - файл: `01_2018_mouse_to_tablet/2018-07-20_almost_adapted_tablet.mp4`
 - ★ **2018-08-09** · 105 просм. · 30 с · «Handmade Tablet Cover (!tablet !switch !mousedrift)» · [ссылка](https://www.twitch.tv/flyingtuna/clip/SingleHelpfulDotterelPeteZaroll)
   - файл: `01_2018_mouse_to_tablet/2018-08-09_handmade_tablet_cover.mp4`
+  - en/sm: [23s] I'm gonna play with Tobliet, okay?
 - ★ **2018-08-17** · 132 просм. · 30 с · «Pen Upgrade» · [ссылка](https://www.twitch.tv/flyingtuna/clip/ObedientCogentDotterelBCouch)
   - файл: `01_2018_mouse_to_tablet/2018-08-17_pen_upgrade.mp4`
+  - en/sm: [9s] No!
 - ★ **2018-10-06** · 64 просм. · 30 с · «OWC 2018 Korea Tryout Match 20:00 KRT (!time)» · [ссылка](https://www.twitch.tv/flyingtuna/clip/RealSmellyRadishEleGiggle)
   - файл: `01_2018_mouse_to_tablet/2018-10-06_owc2018_korea_tryout.mp4`
+  - ko/sm: [0s] 아직도 2개 다 쳐놨어
 - **2018-02-10** · 240 просм. · 36 с · «LUL» · [ссылка](https://www.twitch.tv/flyingtuna/clip/CoweringObservantVampirePeoplesChamp)
   - en/sm: [23s] What the fuck red fox is? [29s] So good stamina [31s] Better than me
 - **2018-02-25** · 6 007 просм. · 30 с · «LOL» · [ссылка](https://www.twitch.tv/flyingtuna/clip/TallNiceSwallowTheTarFu)
@@ -82,6 +97,8 @@
   - en/sm: [8s] What the fuuuu-
 - **2018-05-25** · 288 просм. · 26 с · «TUNA 800 PP PLAY» · [ссылка](https://www.twitch.tv/flyingtuna/clip/TenaciousWimpyMallardChefFrank)
   - en/sm: [0s] Woooah! [2s] Holy shit! [5s] Holy shit! The pp counter! [10s] Oh my god! [12s] Holy shit! [17s] Oh my fucking god! I got a 800pp! [25s] Yeah!
+- **2018-06-13** · 99 просм. · 41 с · «WTF?» · [ссылка](https://www.twitch.tv/flyingtuna/clip/SavoryPowerfulCucumberDatBoi)
+  - en/sm: [0s] me and you [2s] oh [3s] holy shit flying tuna dead [20s] i'm flying tuna's friend [22s] what the fuck happening [23s] flying tuna dad [25s] somebody help me [26s] somebody help
 - **2018-06-15** · 2 745 просм. · 20 с · «wtf» · [ссылка](https://www.twitch.tv/flyingtuna/clip/ResoluteMoldyHyenaUncleNox)
 - **2018-06-16** · 3 618 просм. · 30 с · «OwO» · [ссылка](https://www.twitch.tv/flyingtuna/clip/SolidAttractiveOstrichHassanChop)
   - en/sm: [25s] What the fuck, 600 pp? [27s] That is 600 pp.
@@ -95,6 +112,8 @@
 - **2018-07-23** · 3 771 просм. · 45 с · «God module» · [ссылка](https://www.twitch.tv/flyingtuna/clip/CheerfulYummyNoodleTriHard)
 - **2018-08-22** · 1 925 просм. · 30 с · «yea mouse is better» · [ссылка](https://www.twitch.tv/flyingtuna/clip/ClearFamousTurtleBCouch)
   - en/sm: [9s] Mao is better, yeah shut the fuck up. [12s] Yeah Mao is better, yeah shut the fuck up. [15s] Yeah Mao is better, yeah shut the fuck up. [17s] Mao is better, yeah shut the fuck up. [19s] Mao is better, yeah shut the fuck up. [21s] Mao is better, yeah shut the fuck up. [24s] Yeah Mao is better, yeah shut the fuck up. [26s] Shut the fuck up.
+- **2018-09-07** · 99 просм. · 36 с · «WTF» · [ссылка](https://www.twitch.tv/flyingtuna/clip/LachrymoseScrumptiousLettuceNotLikeThis)
+  - en/sm: [1s] Oh [3s] Double time relax pop chat [6s] What the fuck I can't hit that
 - **2018-09-08** · 1 828 просм. · 28 с · «USE RAFIS SKIN» · [ссылка](https://www.twitch.tv/flyingtuna/clip/EntertainingOpenChamoisCurseLit)
   - en/sm: [13s] Use rough skin! Use rough skin! Use rough skin! Use rough skin! Use rough skin! Use rough skin! Use rough skin! Use rough skin! Use rough skin! Use rough ski…
 - **2018-09-08** · 780 просм. · 30 с · «USE RAFIS SKIN!» · [ссылка](https://www.twitch.tv/flyingtuna/clip/TangibleSnappyDiamondHumbleLife)
@@ -112,8 +131,10 @@
   - файл: `02_road_to_1/2018-12-16_top10_global.mp4`
 - ★ **2018-12-26** · 48 просм. · 60 с · «FLYINGTUNA 14K» · [ссылка](https://www.twitch.tv/flyingtuna/clip/LongVastPigeonJonCarnage)
   - файл: `02_road_to_1/2018-12-26_14k_pp.mp4`
+  - en/sm: [12s] Thank you [47s] Okay [52s] Oh my gosh, oh my god, oh what the fuck oh my God, oh fuck the chokers
 - ★ **2019-01-09** · 66 просм. · 35 с · «FlyingTuna's first english words» · [ссылка](https://www.twitch.tv/flyingtuna/clip/ToughTenuousSeahorseHumbleLife)
   - файл: `02_road_to_1/2019-01-09_first_english_words.mp4`
+  - en/sm: [0s] It was fucking bad. Yeah, I know. [3s] I- I- My English is bad now. But, yeah. [6s] Old Flying China English was much more bad. [9s] Much- Much- MUCH worse. [11s] Like, I-I- I can't- I could- [14s] I could say just what and duh and fuck and holy and shit and fucking shit and [22s] bitch and sock and mouse and [26s] keyboard and tablet. [27s] it. That's all. That is all. I improved my English. I improve.
 - ★ **2019-02-10** · 190 просм. · 28 с · «#2 TUNA LETS GO!!!» · [ссылка](https://www.twitch.tv/flyingtuna/clip/TsundereAlluringEyeballWoofer)
   - файл: `02_road_to_1/2019-02-10_number2_lets_go.mp4`
 - ★ **2019-02-10** · 722 просм. · 34 с · «im playing osu mom» · [ссылка](https://www.twitch.tv/flyingtuna/clip/FantasticGleamingSrirachaDogFace)
@@ -178,19 +199,17 @@
 - ★ **2019-02-27** · 406 просм. · 59 с · «FlyingTuna's opinion on BeasttrollMC as a player» · [ссылка](https://www.twitch.tv/flyingtuna/clip/GlamorousTardyMartenChocolateRain)
   - файл: `03_number_one_2019-02-11/2019-02-27_opinion_on_btmc.mp4`
   - en/sm: [0s] Beast is so fucking good and he's so fucking underrated [4s] You know the only the only his defect is fucking double time and speed 8. That's all. That's all and [13s] Me as well [14s] My only defect is fucking space dream and hard rock as well. Okay [23s] Beast is underrated because beast is like trying to entertaining us and [30s] So that's why we don't know like [32s] Beast is so fucking top ranker like some top some some some viewers doesn't even know [38s] Beast or is fucking top ranker because his dream is focus on focus on fucking just entertaining [54s] and yeah his play is so fuc
-- **2019-02-12** · 44 просм. · 59 с · «rip» · [ссылка](https://www.twitch.tv/flyingtuna/clip/DreamyCalmSnailChefFrank)
-  - en/sm: [12s] Yes [19s] J ex x or a why no one will read but I I'm gay no one will read no one will read this [37s] But I'm gay you fucking exposed. Yes being gay is no problem [55s] By the way, how much
 - **2019-02-16** · 3 143 просм. · 26 с · «Pog» · [ссылка](https://www.twitch.tv/flyingtuna/clip/UnsightlyOnerousSmoothieOpieOP)
 - **2019-02-22** · 450 просм. · 24 с · «Tuna tries» · [ссылка](https://www.twitch.tv/flyingtuna/clip/ConsiderateCourteousEagleDerp)
   - en/sm: [5s] Yeah, like I tried I tried as [9s] You say but that doesn't really work because I didn't try so much so yeah, I had to [17s] Try again
-- **2019-02-25** · 70 просм. · 59 с · «Honest...yy......yyyyyyyyyyy» · [ссылка](https://www.twitch.tv/flyingtuna/clip/FairAlluringCucumber4Head)
-  - ko/sm: [1s] Where is my soul? [5s] On this day [7s] I got you so I know it [11s] Can't take off [13s] I got you so I know it [16s] Don't you think I don't [19s] You go ahead and I got you so I know it [24s] I got you so I know it
 - **2019-02-27** · 595 просм. · 45 с · «Absolute madness» · [ссылка](https://www.twitch.tv/flyingtuna/clip/NimbleAggressiveManateeRuleFive)
 - **2019-03-04** · 3 027 просм. · 47 с · «flyingtuna wtf» · [ссылка](https://www.twitch.tv/flyingtuna/clip/JollyScaryJamDeIlluminati)
   - en/sm: [44s] My finger health is so weak.
 - **2019-03-05** · 1 037 просм. · 28 с · «FlyingTuna has ascended» · [ссылка](https://www.twitch.tv/flyingtuna/clip/OddStrongDunlinOneHand)
 - **2019-03-16** · 165 просм. · 36 с · «LuL» · [ссылка](https://www.twitch.tv/flyingtuna/clip/BigManlyBatteryEleGiggle)
   - en/sm: [1s] noticeable so I saw that and that was just fucking Chinatown look at chat I [11s] will ban you wait until this fucking song ends
+- **2019-03-28** · 134 просм. · 22 с · «Tuna's dad» · [ссылка](https://www.twitch.tv/flyingtuna/clip/EnchantingSassyGiraffeDoritosChip)
+  - ko/sm: [2s] 안녕하셨습니까? [3s] 밥은? [4s] 먹었어 [5s] 어 좀 가려있고 [6s] 밥은 안 먹었네 [7s] 이제 자라 [8s] 알았다 [9s] 어? [11s] 라인톤아 [12s] 이제 자라네
 - **2019-03-29** · 1 329 просм. · 60 с · «Relax God hits once again» · [ссылка](https://www.twitch.tv/flyingtuna/clip/SincereMushyRuffFeelsBadMan)
   - en/sm: [15s] Wow, that's happy. [56s] Low. [58s] Okay. [58s] Okay
 - **2019-03-31** · 4 740 просм. · 20 с · «TUNA WTF» · [ссылка](https://www.twitch.tv/flyingtuna/clip/VenomousTenderGrouseCoolStoryBob)
@@ -200,6 +219,8 @@
   - en/sm: [2s] Somebody's-
 - **2019-05-05** · 549 просм. · 29 с · «why offline» · [ссылка](https://www.twitch.tv/flyingtuna/clip/LaconicFurtiveCocoaPanicBasket)
   - en/sm: [4s] Why is he playing offline? Why are you playing online? Online is fucking shit server [10s] Play offline server like there is no people in this server literally, so I'm supporting this server [17s] Hey [20s] Hey, what a fucking poor server like no fuck no people [25s] Only me
+- **2019-05-17** · 120 просм. · 15 с · «lol hi flying xdddd» · [ссылка](https://www.twitch.tv/flyingtuna/clip/TentativeBlightedStarYee)
+  - en/sm: [1s] Oh shit what the fuck is that? [11s] I didn't even know I have that shit!
 - **2019-05-18** · 289 просм. · 33 с · «TUNA AUIWF AUFIAWIYFWAIHFAWGBU» · [ссылка](https://www.twitch.tv/flyingtuna/clip/CreativeAntsyCaterpillarCopyThis)
   - en/sm: [25s] Fucking SS Chokun this part. What the hell? You're kidding me
 - **2019-05-18** · 363 просм. · 29 с · «#1 AGAIN» · [ссылка](https://www.twitch.tv/flyingtuna/clip/TrappedTacitVampirePicoMause)
@@ -208,6 +229,8 @@
   - en/sm: [14s] Fucking shit! [26s] My hand is burning!
 - **2019-05-18** · 3 194 просм. · 28 с · «TUNA CRACK MODE» · [ссылка](https://www.twitch.tv/flyingtuna/clip/CrunchyRoundJaguarDoubleRainbow)
   - en/sm: [2s] I don't fucking do you only highlight it [5s] Okay, hello circles. I'm not hitting you [10s] Okay, let's go. Oh [13s] My gosh fucking shit
+- **2019-05-19** · 125 просм. · 24 с · «Reviewed by Flying Tuna» · [ссылка](https://www.twitch.tv/flyingtuna/clip/ArbitraryCutePlumageFeelsBadMan)
+  - en/sm: [0s] Like, instant music contest and that will be fucking... [6s] ffff... fucking funny. [9s] Guys, please. [11s] Please, please, please... [20s] Yeah, this game is fucking cool.
 - **2019-08-19** · 4 118 просм. · 46 с · «H O W» · [ссылка](https://www.twitch.tv/flyingtuna/clip/AttractiveVibrantBisonGivePLZ)
 - **2019-09-07** · 317 просм. · 28 с · «Thank you beasttroll» · [ссылка](https://www.twitch.tv/flyingtuna/clip/SlickBoredCookieSuperVinlin)
   - en/sm: [0s] Put that shit in the thumbnail boom that is a viral osu video [7s] That's all you need spread the word did all right [13s] Okay [17s] Okay [24s] Thank you base drill
@@ -353,6 +376,8 @@
   - en/sm: [0s] Wait what the fuck is that water what? I'm pretty sure that's fucking lame [6s] What you guys use that [9s] What you guys you guys drink fucking sink water? [16s] Not not not that that should not be a thing. What is this? [21s] Is this the fucking cultural different like culture? [25s] Fucking difference you guys say that's disgusting. No, no, no, I risk
 - **2022-01-10** · 75 просм. · 30 с · «might be my last stream. | OWC Losers Grand Finals vs Germany | !discord» · [ссылка](https://www.twitch.tv/flyingtuna/clip/HorribleBumblingJuiceJonCarnage-9nLC92DWJLsiTZAF)
   - en/sm: [0s] What? What is not working? [5s] What?
+- **2023-04-13** · 47 просм. · 30 с · «OWC Losers SF vs Japan» · [ссылка](https://www.twitch.tv/flyingtuna/clip/GracefulDaintyScorpionCurseLit-mrqnZlA7Jo_AkMea)
+  - ko/sm: [0s] 마이아드 님 해도 될 것 같애 [1s] 네 마이아트 님이 나을 것 같다 [3s] 아첸 님 [3s] 네 그럼 [3s] 제가 밑에 깔을 [5s] ㅋㅋㅋㅋ… [6s] ㅋㅋㅋㅋ… [7s] 아니 [7s] 깔아주는 것도 잘하는 거 같애요 [10s] 맵판 들어와서 깔아드는거 [12s] 맞아 [12s] 좀 좋아 [12s] 오케이 오케이 [14s] ㅋㅋㅋㅋ… [29s] 아마 미뤄
 
 ## Май–октябрь 2023 — возвращение
 
@@ -377,15 +402,11 @@
   - en/sm: [0s] For two years in military training. [3s] Okay. [4s] The question I have for you, bro. [6s] It's not two years, by the way. [8s] Okay. [10s] The two years. [11s] Okay. [12s] How far can you squirt? [15s] Huh? Squirt?
 - **2023-05-28** · 427 просм. · 28 с · «casual stream right???» · [ссылка](https://www.twitch.tv/flyingtuna/clip/CoyIgnorantEmuGingerPower-UmVazktuQ8Uy1efs)
   - en/sm: [2s] Six ads wait, dude [6s] What wait there should be something wrong with the ad setting, right? [19s] Wait, but I want to fix that instantly though, dude. I don't want I don't want to make my fucking like I [26s] Don't want to make my dude like watch
-- **2023-05-28** · 125 просм. · 26 с · «casual stream right???» · [ссылка](https://www.twitch.tv/flyingtuna/clip/CrepuscularLazyLemurPicoMause-gAifLvTneKiv5bOs)
-  - en/sm: [0s] No, there is frame dry thing. I don't know remember remember when I tweeted the [9s] Remember when I tweeted the frame drop stuff. I don't know if that is still going on. I [15s] Hope it's not [18s] Well, it is scuffed anyway, so I hope it's not that scuffed [22s] Everyone has frame drops. Everyone's frame dropping way really
 - **2023-05-28** · 235 просм. · 26 с · «casual stream right???» · [ссылка](https://www.twitch.tv/flyingtuna/clip/AbrasiveHorribleAlpacaUWot-c1qJhuU-doH-gk7p)
 - **2023-05-28** · 223 просм. · 26 с · «casual stream right???» · [ссылка](https://www.twitch.tv/flyingtuna/clip/PricklySlickZucchiniPhilosoraptor-ZEdps9N9WelUMe0i)
   - en/sm: [23s] Damn. [25s] Not bad, but-
 - **2023-05-28** · 241 просм. · 28 с · «casual stream right???» · [ссылка](https://www.twitch.tv/flyingtuna/clip/DreamyTalentedMomSaltBae-ywPuH08gBzW3WH-T)
   - en/sm: [19s] Okay, bro. Oh, okay. I missed this entire shit
-- **2023-05-28** · 122 просм. · 28 с · «casual stream right???» · [ссылка](https://www.twitch.tv/flyingtuna/clip/ObeseAnnoyingZebraStrawBeary-1iSe3SBWqjyPD3m3)
-  - en/sm: [4s] No, no, no, that's so hard! [13s] Yeah. [21s] So many banger songs, dude.
 - **2023-05-29** · 315 просм. · 14 с · «pelle» · [ссылка](https://www.twitch.tv/flyingtuna/clip/RefinedAbrasiveCrabWOOP-kRK_CK4-65QF-gqb)
   - en/sm: [1s] This is one of my favorite maps, the Raidjadu is my current favorite map.
 - **2023-05-29** · 457 просм. · 28 с · «Math» · [ссылка](https://www.twitch.tv/flyingtuna/clip/AliveSpineyGrouseRlyTho-LeGmgpyGd0YCrg6V)
@@ -399,10 +420,14 @@
   - en/sm: [2s] Dude it's so fucking pissing. It's I am pissing right now. Yeah, but I'm gonna go piss
 - **2023-06-07** · 215 просм. · 34 с · «aim is bad today...today is aim day!!!» · [ссылка](https://www.twitch.tv/flyingtuna/clip/MoldyGenerousWaterTBCheesePull-S44kKryAHYhUeYtq)
   - en/sm: [11s] My aim sucks today. Holy fuck man. It's garbage. I'm so good at good aim bro. What? [31s] Today is aim day man
+- **2023-06-19** · 132 просм. · 8 с · «lulin» · [ссылка](https://www.twitch.tv/flyingtuna/clip/QuaintProudDonutSSSsss-Zd1VOwQXr_2t1LMA)
+  - en/sm: [0s] He said this was a failure. [4s] The fuck? [7s] What the fuck?
 - **2023-06-22** · 242 просм. · 24 с · «balls» · [ссылка](https://www.twitch.tv/flyingtuna/clip/NastyBelovedLarkHoneyBadger-0T_kIlRVHS-BrSGM)
   - en/sm: [0s] So what? Me gusta? [1s] Cojones. [2s] Cojones. [5s] They're gonna fucking clip it, like 3 seconds clip, and they're gonna make some fucking controversy. [11s] You like balls. [13s] Wait, that's true. [16s] Oh, me gustando os cojones. Can you say me gustando os cojones? [21s] Just a fuck off. [22s] Tino, Tino, Tino. [23s] Did I? I looked at you.
 - **2023-06-28** · 229 просм. · 23 с · «wtf tuna» · [ссылка](https://www.twitch.tv/flyingtuna/clip/CoyEndearingRadicchioKappa-8PsvP2jkN1DINq2F)
   - en/sm: [2s] Oh, oh, what the fuck? [22s] Oh, what? [23s] What the fuck.
+- **2023-10-15** · 129 просм. · 28 с · «MGC SF vs decaten at 17 UTC | !skypad !owc !roster !tourney» · [ссылка](https://www.twitch.tv/flyingtuna/clip/BlushingRacyCroquetteBigBrother-TZptD7CB3CYFcnkt)
+  - en/sm: [0s] Holy shit, I'm so fucking mad. No fucking shot. I just screwed up like three times in the fucking row. [12s] Oh my god, I am so mad at myself.
 
 ## Ноябрь–декабрь 2023 — OWC 2023 (6:7)
 
@@ -533,21 +558,21 @@
 - **2024-05-12** · 137 просм. · 9 с · «yippie» · [ссылка](https://www.twitch.tv/flyingtuna/clip/FamousDeterminedMouseNomNom-J7saMtdR8MhKSz7B)
   - en/sm: [0s] Dude, I fucking hate that one. [3s] Missus... [5s] Sus... [6s] Pichin, thank you so much for the... [7s] Thank you sooo much for your raid.
 - **2024-05-25** · 215 просм. · 23 с · «HUH WHHAT» · [ссылка](https://www.twitch.tv/flyingtuna/clip/WittyEndearingMagpieJebaited-rcN6fFzsGjOwgrzk)
+- **2024-07-16** · 99 просм. · 15 с · «what do we do...» · [ссылка](https://www.twitch.tv/flyingtuna/clip/MoralNaiveMageM4xHeh-cJurFnZu29Dufntw)
+  - en/sm: [0s] Alright so... [2s] What do we do in this situation? [6s] 1, 2, 3, 4, like 300 bpm jump might work. [10s] Okay let's do it. [14s] Ah shit!
 - **2024-08-04** · 298 просм. · 5 с · «HNGGGAAAAH» · [ссылка](https://www.twitch.tv/flyingtuna/clip/HumbleKnottySnoodCclamChamp-1vReSeODBTOWJXZu)
+- **2024-08-21** · 117 просм. · 60 с · «Flying Tuna main skill set are speeeeddd» · [ссылка](https://www.twitch.tv/flyingtuna/clip/ShySuperApeBudBlast-u93I84osQnF8L4eT)
+  - en/sm: [0s] What flying to an amendo speed players no what? [38s] Bro, I'm like that's my worst skills that bro
 - **2024-08-29** · 215 просм. · 17 с · «rip keyboard» · [ссылка](https://www.twitch.tv/flyingtuna/clip/ObliqueOutstandingDragonFrankerZ-l1JTCOoypfBd9T23)
   - en/sm: [12s] I don't know. No, no, no, no. I'm sorry. I'm sorry. Oh my god. Fuck
 - **2024-09-20** · 442 просм. · 28 с · «[#35] grinding | !kofi» · [ссылка](https://www.twitch.tv/flyingtuna/clip/DistinctAggressiveBananaDendiFace-OclTC28YPwZwNVNf)
   - en/sm: [5s] What what what what wait how wait how wait we will how wait how [26s] Huh
+- **2024-09-20** · 101 просм. · 21 с · «???» · [ссылка](https://www.twitch.tv/flyingtuna/clip/SolidEnticingCougarCmonBruh--BFChJFEgGevet3-)
+  - en/sm: [1s] Bro, I was about to say nightmare and I almost I almost said nightmare as masturbate [7s] Let me alone
 - **2024-09-25** · 829 просм. · 30 с · «??????» · [ссылка](https://www.twitch.tv/flyingtuna/clip/AuspiciousSplendidRavenOpieOP-y_GRMGOd-HUNT54E)
-- **2024-10-29** · 73 просм. · 9 с · «HUH» · [ссылка](https://www.twitch.tv/flyingtuna/clip/ColorfulAssiduousDiscKappaRoss-9t-YNIY2AClvPtmO)
-  - en/sm: [0s] All right, let me let me actually remove the gamma. I feel like the gamma 1.5 is actually making me hard like making me hard [6s] No, no, no, no, no, I don't mean that. No, no, no, like
-- **2024-11-04** · 71 просм. · 34 с · «i hate sans» · [ссылка](https://www.twitch.tv/flyingtuna/clip/ResoluteRoughMarjoramImGlitch-EZPlMBwpBnPRwRG1)
-  - en/sm: [1s] The one thing I just never understand is that I just magically did so fucking well and choked [6s] 1,300 pp on the most fucking stupid way possible after that day [10s] I just can never fucking do that shit like anymore. Oh [14s] My fucking God this shit is so frustrating [20s] Sans is like bro that fucking the sense is like ruining my oh my god, dude. I hate sense. I [28s] Hate Sans
 - **2024-11-24** · 94 просм. · 30 с · «[#12 NO REQUEST] OWC SF vs Germany at 13 UTC LOCK TF IN | !kofi !vid» · [ссылка](https://www.twitch.tv/flyingtuna/clip/QuaintSmokyArmadilloKappaWealth-Ypf0-0smjV9GlmbZ)
   - en/sm: [16s] Yeah, I'm getting fingerlocked too much. [18s] That's so bad.
 - **2024-12-08** · 355 просм. · 26 с · «OWC GRAND FINALS VS USA | !kofi !vid» · [ссылка](https://www.twitch.tv/flyingtuna/clip/AffluentWildBottleOSkomodo-6-ug5FTtUj2_W_Sz)
-- **2024-12-10** · 80 просм. · 30 с · «Stare» · [ссылка](https://www.twitch.tv/flyingtuna/clip/EphemeralWealthyMelonCopyThis-LuViQGU_b5ZsL816)
-  - en/sm: [0s] I'm currently holding a french fries, so Konninaru [10s] Wait, okay
 - **2024-12-10** · 165 просм. · 20 с · «bro I got the epic cheese chiken» · [ссылка](https://www.twitch.tv/flyingtuna/clip/BrightHomelyWebTTours-PQ23DeSURscIYAvO)
   - en/sm: [2s] Next question [4s] It's your birthday. Happy birthday. Hey, have a chicken piece [8s] Happy birthday. You're you're the only one allowed to take a chicken piece because it's your birthday. No one else charges him [14s] Take it
 - **2024-12-10** · 361 просм. · 21 с · «epic cheese chicken» · [ссылка](https://www.twitch.tv/flyingtuna/clip/AdorableGiftedSpindleAMPTropPunch-sqWe2-v10B75bydd)
@@ -561,12 +586,21 @@
 - **2025-01-17** · 303 просм. · 30 с · «Tuna Kekw» · [ссылка](https://www.twitch.tv/flyingtuna/clip/EsteemedFancyJalapenoGrammarKing-C2V_W3o6J36cdxYs)
   - en/sm: [26s] AHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHAHA…
 - **2025-01-17** · 111 просм. · 5 с · «Taken out of context» · [ссылка](https://www.twitch.tv/flyingtuna/clip/AbstruseSpeedyClintmullinsThisIsSparta--6T6DLQKrCnHWaQ2)
+  - en/sm: [2s] You should come.
 - **2025-01-17** · 112 просм. · 21 с · «OUTRO TIME» · [ссылка](https://www.twitch.tv/flyingtuna/clip/AbnegateVastCookieSMOrc-CnUNmV5v-TqHhG1X)
+  - en/sm: [0s] Yo guys, thank you so much for watching today's stream. I hope you enjoyed make sure to leave a like and subscribe and comment double [6s] on your top 10 five [12s] Make sure to donate all your life savings in the three dishes at the back of the credit card to this guy right here [17s] Peace
+- **2025-01-20** · 88 просм. · 12 с · «U also love what tuna?» · [ссылка](https://www.twitch.tv/flyingtuna/clip/ColorfulSquareAubergineYouDontSay-eEku6-rMjjmaaNPP)
+  - en/sm: [2s] Arm [4s] Mona donated five dollars. I can love dipping my balls in frying oil. I [9s] Also love to dip my balls and frying oil
 - **2025-02-04** · 134 просм. · 30 с · «XD» · [ссылка](https://www.twitch.tv/flyingtuna/clip/GlutenFreeInnocentDogeTebowing-frdkrD6JL_ek2uIW)
+  - en/sm: [2s] Wait wait, did you just say join minecraft session? Join the minecraft session [15s] Bro, I swear join the mine craft session
 - **2025-03-02** · 165 просм. · 26 с · «WTF???» · [ссылка](https://www.twitch.tv/flyingtuna/clip/SpikyTrustworthySlothPanicBasket-_TCla5e0fbmamBMh)
 - **2025-04-01** · 136 просм. · 30 с · «polska mukbang ft rafis, memli and annie | !kofi !vid» · [ссылка](https://www.twitch.tv/flyingtuna/clip/AwkwardClearAniseGOWSkull-361MjCLNfgJQN8u7)
+  - en/sm: [0s] Let's start okay well who would you like first okay? I mean so much like this [7s] Just for me a little but I want antibiotics, but that's besides the point is much sure yeah [13s] Okay, okay any drink it me first yeah [18s] Okay smells terrible. I'm not gonna lie. Mm-hmm. They smell like Earl grievous. It was like bitter early. Okay [23s] Okay. [24s] Anyone smell test? [26s] Yeah, it smells like tea. [27s] Yeah, actually it smells. [28s] Okay. [29s] Smells pretty.
 - **2025-04-01** · 93 просм. · 5 с · «THE EPIC CHEESE CHICKEN» · [ссылка](https://www.twitch.tv/flyingtuna/clip/VibrantAbnegateArtichokeSeemsGood-zQS9n7nrUrDCUMS6)
+  - en/sm: [0s] It's literally the epic cheese chicken guys.
 - **2025-06-09** · 137 просм. · 12 с · «Mrekk moment» · [ссылка](https://www.twitch.tv/flyingtuna/clip/SullenMiniatureFishM4xHeh-PGWZZvnV0TmJZmEV)
+- **2025-06-18** · 80 просм. · 16 с · «????» · [ссылка](https://www.twitch.tv/flyingtuna/clip/LazyGiantSquidTF2John-raj_wvAXQVb_OAys)
+  - en/sm: [11s] Oh fuck man, I fucked it up but it... [14s] Ah shit that was so embarrassing.
 - **2025-08-20** · 270 просм. · 56 с · «d» · [ссылка](https://www.twitch.tv/flyingtuna/clip/ArbitraryFineNigiriPartyTime-SGvRkEqQQ7pZZxCi)
 - **2025-08-20** · 920 просм. · 59 с · «a» · [ссылка](https://www.twitch.tv/flyingtuna/clip/DoubtfulProudPangolinKAPOW-gRLKNPlSL7u6sB42)
   - en/sm: [9s] What the fuck what the fuck
@@ -574,15 +608,10 @@
   - en/sm: [0s] No. [1s] A- age... [3s] In- in like a... [4s] Skill-wise, the age does not matter, guys. [7s] Playing, like, you know, you- you guys can be talented in 30, like, even if you're at 30 or so. [12s] Guys! No, don't take it- [14s] I'm CANCELLED! [18s] FUCK, MAN!
 - **2025-12-08** · 172 просм. · 13 с · «is the talent in the room?» · [ссылка](https://www.twitch.tv/flyingtuna/clip/RelentlessTardyTardigradeMau5-s09MQFbW6KaFZOUZ)
   - en/sm: [2s] I'll prove you guys I'm talented fuck I was doing with CMV
-- **2025-12-08** · 66 просм. · 60 с · «tuna passed reblossia after almost 3 hours» · [ссылка](https://www.twitch.tv/flyingtuna/clip/JollyObliqueSwanOneHand-tlTQXLj_JGbVH5Nb)
-  - en/sm: [46s] I'm sorry that I have s- [49s] I'm sorry I did it when you were shitting [54s] Oh my fucking god [58s] Guys, I actually made it
-- **2026-06-07** · 65 просм. · 42 с · «sgddsgsdgs» · [ссылка](https://www.twitch.tv/flyingtuna/clip/CogentTrappedCakeOSfrog-bjrDLhOaooR_HaUQ)
-  - en/sm: [5s] I just lost all the aura from the scream. Oh hell no. Yeah, so I miss at the at the beginning
 - **2026-06-13** · 86 просм. · 33 с · «he wouldve jork» · [ссылка](https://www.twitch.tv/flyingtuna/clip/ProudAmorphousDinosaurGrammarKing-vAwBKG0OcP-UqFk1)
   - en/sm: [4s] I can literally jerk up to my own play. Holy fuck dude. Holy shit [20s] Not bro. If I was not swimming bro, bro, and if I was watching that [26s] Oh my god, I don't even have to say it. I don't [31s] Holy shit
-- **2026-06-21** · 68 просм. · 22 с · «how did he hit that» · [ссылка](https://www.twitch.tv/flyingtuna/clip/HungryWittyNuggetsDancingBaby-fpu1w9-hKQ00XqcL)
-  - en/sm: [5s] That pattern is so brutal [16s] Bro that tapping method. Oh my I'm cooking up
 - **2026-09-11** · 105 просм. · 14 с · «another one» · [ссылка](https://www.twitch.tv/flyingtuna/clip/DoubtfulProudSagePicoMause-gx1Pmpb9Wak4qhuQ)
+  - en/sm: [0s] Zero sugar is shy much get flavor. Wait, can I also get mine? Yeah, thank you. I [7s] Actually, I'm down to try right rithia [12s] Yo, yeah, yeah
 
 ## Трансляция osu! (osulive) — комментаторы
 

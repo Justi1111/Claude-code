@@ -41,6 +41,8 @@
   - 📁 `01_2018_mouse_to_tablet/2018-07-15_mouse_drift_explained.mp4`
 - **08.07.2018, «Relax Godmode kills mouse»** ✅
   > «relax, relax, just tapping, hey relax guys… mouse doesn't move me… that is wicked»
+- **22.08.2018, «yea mouse is better»** (1,9 тыс.) — отвечает чату через месяц после перехода на планшет ✅
+  > «Mouse is better, yeah, shut the fuck up.» (повторяет несколько раз)
 - **16.06.2018, «OwO»** ✅
   > «What the fuck, 600 pp? That is 600 pp.»
 - **18.03.2018, «Flying Tuna God mode!!!!!!!!»** ✅
@@ -100,6 +102,17 @@
   - 📁 `06_owc2021_and_army/2022-11-24_these_words_came_true_lets_come_back_in_2023.mp4`
 - **27.11.2021, «TIE TIE TIE…»** — тайбрейк против Германии 🟡
   > «제발 제발 제발…» — «Пожалуйста, пожалуйста…» (повторяет много раз)
+- **VOD «might be my last stream», 1:46:26–1:49:37 — войс команды сразу после проигранного тайбрейка** ✅ medium. Говорят несколько человек, кто именно — не подписано.
+  > «아 GG… 너무 잘했어… 이 정도로 됐어… 아 좀 더 잘할 수 있었는데…» — «GG… Отлично сыграли… Этого достаточно… Эх, могли бы и получше…»
+  > [1:47:39] «내가 없이 이 팀이 잘하는 거 보니까 뭔가 좀 [뭉클]하네.» — «Смотрю, как эта команда хорошо играет без меня, — как-то [трогательно].» 🟡 последнее слово распознано неуверенно
+  > [1:48:10] «아 그리고 **참치 군대 잘 갔다 오고**… 야, 건강하게.» — «А, и **Тунец, сходи в армию и возвращайся целым**… Эй, береги себя.»
+  > [1:48:18] «마지막에 진짜 우승해서 좋은 기록, 좋은 기억 남겨주고 싶었는데… 아쉽게 됐어.» — «Под конец так хотелось выиграть и оставить хороший результат, хорошее воспоминание… Жаль, не вышло.»
+  > [1:48:58] «삐끗한 날도 있고 삐끗한 해도 있고.» — «Бывают дни, когда оступаешься, бывают и годы.»
+  > [1:49:03] «영국전 거의 2019년 가져온 거잖아… 6대2에서 끌어온 것만 해도 진짜 대단한 거였지.» — «Матч с UK — это же почти 2019-й вернули… Отыграться с 2:6 — уже реально круто.»
+  > [1:49:19] «같이 해준 것만으로도 너무 고마우니까, 너무 막 못했다고 자책하지는 말고. 3등 진짜 잘한 거거든요.» — «Спасибо уже за то, что играли вместе. Не корите себя, что сыграли плохо. Третье место — это реально хорошо.»
+  > [1:49:30] «그래, 우리 다 멋있게 잘했어. 너무 멋있는 8명이야.» — «Да, мы все круто сыграли. Восемь очень классных человек.»
+  - 📁 `06_owc2021_and_army/2021-11-27_VOD_tb_lost_team_voice_go_to_army_safely.mp4` (VOD 1:46:25–1:49:40)
+  - 📁 `06_owc2021_and_army/2021-11-27_VOD_team_voice_karuna_and_tuna.mp4` (VOD 1:50:12–1:51:00). Кто-то из команды, судя по всему капитан Karuna, говорит: «주역은 카르나랑 튜나였으면… 저랑 튜나만큼 해주는 팀원들이 있다는 것 자체가 올해 너무 뜻깊었던 것 같아요» («Раньше всё держалось на Karuna и Tuna… а то, что теперь есть ребята, которые играют не хуже меня и Tuna, сделало этот год очень важным»). 🟡 small, переслушать.
 - **27.11.2021, «o7»** ✅
   > «Basically… before I go to the army, I'll just say o and then 7, like this… Like a cool fucking guy, right? And then, oh yeah, I'm gonna go to the army. And then in two months, the moment when I'm able to use the phone, I'm just gonna spam… "I wanna go home every day"… I would prefer to just not do anything and then just meditate every day, dude»
   - 📁 `06_owc2021_and_army/2021-11-27_o7_before_army.mp4`
@@ -205,6 +218,8 @@
 - **08.12.2024, «achievement list jumpscare»** — на стриме читает свой Achieve list ✅
   > «Achieve list, okay guys, look look look… I started osu! in 2016, November 4th, right? After, uh, eight months I reached three digits. After eight months of playing, I reached three digits.»
   - 📁 `09_owc2024/2024-12-08_achieve_list_reading.mp4`, `09_owc2024/2024-12-08_achieve_list_jumpscare.mp4`
+- **02.02.2024, «tuna 1k»** ✅
+  > «Guys, it's fucking over! Guess how much PP I got?»
 - **Интервью после победы (osu! news)** ✅ текст
   > «It is definitely one of the greatest things in my life and I will cherish it always» / «we are used to reverse sweeping»
 
