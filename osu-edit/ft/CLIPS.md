@@ -525,9 +525,10 @@
   - ko/sm: [27s] 아 진짜 잘한다
 - ★ **2024-12-08** · 404 просм. · 30 с · «OWC GRAND FINALS VS USA | !kofi !vid» · [ссылка](https://www.twitch.tv/flyingtuna/clip/ObedientExcitedHorsePogChamp-0z2xERqO55xFSzHN)
   - файл: `09_owc2024/2024-12-08_gf_even_3v4_we_won.mp4`
+  - ko/md: [0s] 이겼어 이겼어요 [2s] 이겼다 이겼어 [6s] 어차피 이겼다고 [8s] 캡쳐했어 캡처했어 [10s] 캡쳐를 지금 당장 [12s] shift f10 눌러갖고 캡치해서 올려 [20s] 괜찮아 괜찮아 [22s] 나간 그 시점에도 이겼고 [24s] 나이스 나이스 [26s] 3대 4여도 이겼다 [28s] 어차피 이겼어
 - ★ **2024-12-08** · 2 261 просм. · 60 с · «the win» · [ссылка](https://www.twitch.tv/flyingtuna/clip/LivelyTransparentVultureNerfBlueBlaster-SVb3Ew5DCo4KxDUF)
   - файл: `09_owc2024/2024-12-08_gf_the_win.mp4`
-  - ko/md: [44s] 렉스를 말해볼까? [45s] 왔냐? [46s] 왔냐? [46s] 렉카? [46s] 렉카? [48s] 렉카? [50s] 렉카? [52s] 렉카? [52s] 렉카! [53s] 렉카! [54s] 렉카! [54s] 렉카! [55s] 렉카! [55s] 렉카! [56s] 렉카!
+  - ko/md: [43s] 이 사람 말해볼까? [45s] 왔냐? 왔나? [47s] 가즈아! [49s] 가즈아아아! [51s] 간다! [53s] 가즈! [55s] 가즈아! [57s] 레츠고!
 - ★ **2024-12-08** · 712 просм. · 26 с · «OWC GRAND FINALS VS USA | !kofi !vid» · [ссылка](https://www.twitch.tv/flyingtuna/clip/ResilientApatheticGarlicAMPEnergyCherry-9ATqiNhz0yPh8GpV)
   - файл: `09_owc2024/2024-12-08_gf_thank_you_all.mp4`
   - ko/sm: [22s] 진짜 고생했습니다 진짜로.

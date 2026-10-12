@@ -239,11 +239,11 @@
     - «I still cannot believe that we're in the Grand Final».
 - **08.12.2024, гранд-финал: Корея 7:4 США.** ✅
   - США повели 4:1, после чего Корея выиграла шесть карт подряд.
-  - Карта 8 (DT4, No Good Magia): у byeok2044 посреди карты отвалилось соединение. Очко отдали Корее, потому что на трансляции она была впереди на финальном экране. FlyingTuna на этой карте — лучший в лобби, 731 787 (98,65%).
+  - Карта 8 (DT4, No Good Magia): у byeok2044 посреди карты отвалилось соединение. Очко отдали Корее, потому что на трансляции она была впереди на финальном экране. FlyingTuna на этой карте — лучший в лобби, 731 787 (98,65%). Его крик, когда очко отдали Корее: «이겼어! 이겼어!… 나간 그 시점에도 이겼고… 3대 4여도 이겼다» («Выиграли! Выиграли!… Мы вели даже в момент обрыва… Выиграли даже втроём против четырёх»). Клип `09_owc2024/2024-12-08_gf_even_3v4_we_won.mp4`.
   - Последняя карта — **«unravel [otshelnik]»** (кастом от aishiteiru-, 8,37★): 1 504 607 против 1 312 767.
   - Тайбрейк «Camellia — Operation: Zenithfall» потом сыграли просто для шоу, всем лобби.
   - Конец шестилетней серии США (2018–2023). Первый титул Кореи с 2013 года.
-- Его реакция на стриме: «이겼어! 이겼어! 얘들아 가자!» («Мы выиграли! Мы выиграли! Ребята, погнали!»). Звонок от «Fiery» (почти наверняка fieryrage из сборной США 2019 и 2023): «I'm so fucking proud of you… After what happened in 2019… It finally happened». ✅ голос / 🟡 личность
+- Его реакция на стриме в момент финальной точки (клип «the win», его экран на unravel, 0:45–0:57): «왔냐? 왔나?… 가즈아! 가즈아아아!… 간다!… 레츠고!» («Есть? Есть?… Погнали! Погна-а-али!… Идём!… Let's go!»). Крик «이겼어!» был раньше, на 8-й карте (см. выше). Звонок от «Fiery» (почти наверняка fieryrage из сборной США 2019 и 2023): «I'm so fucking proud of you… After what happened in 2019… It finally happened». ✅ голос / 🟡 личность
 - После: «It is definitely one of the greatest things in my life and I will cherish it always», «we are used to reverse sweeping». ✅ osu! news
 
 ### 2025–2026
@@ -466,7 +466,7 @@
 ## 8. YouTube: что где искать
 
 ### Его записи стримов ([FlyingTuna VODs](https://www.youtube.com/channel/UCwhn0C5xGeXtbaBop3-veCA)) ✅
-- «osu! World Cup Grand Finals 2024 vs USA» — [oTEFGTDqqvE](https://www.youtube.com/watch?v=oTEFGTDqqvE), 2 ч 30 мин. Его взгляд на победу. Автосубтитров нет; момент «이겼어» есть в клипах Twitch.
+- «osu! World Cup Grand Finals 2024 vs USA» — [oTEFGTDqqvE](https://www.youtube.com/watch?v=oTEFGTDqqvE), 2 ч 30 мин. Его взгляд на победу. Автосубтитров нет; крики «이겼어!» (8-я карта) и «가즈아!» (финальная точка) есть в клипах Twitch.
 - «osu! World Cup Finals 2024 vs USA» — [RzOWyexyf5g](https://www.youtube.com/watch?v=RzOWyexyf5g), 2 ч 52 мин.
   - **1:34:01** — «my teammates were all goats… my teammate literally carried me… we will do better next week».
   - **1:34:52–1:35:11** — «because of the last year I legit got like PTSD… I literally have a jinx personally versus USA every time… my heart rate goes so high and that's why I was underperforming…».
@@ -509,8 +509,8 @@
 ## 9. Мемы, привычки, мелочи
 
 - **«Рифма» 2019 ↔ 2024** — одна и та же фраза с разницей в пять лет:
-  - 21.12.2019, выход в гранд-финал: «이겼다! 이겼다! 이겼다! 가자! 얘들아! 얘들아!» («Выиграли! Выиграли! Выиграли! Погнали! Ребята! Ребята!»), клип «SOUTH KOREA INTO THE GRAND FINALS», 8,5 тыс. Следом был разгром 0:7.
-  - 08.12.2024, титул: «이겼어! 이겼어! 얘들아 가자!».
+  - 21.12.2019, выход в гранд-финал: «이겼다! 이겼다! 이겼다! 가즈아!! 얘들아!! 얘들아!!» («Выиграли! Выиграли! Выиграли! Погнали! Ребята! Ребята!»), клип «SOUTH KOREA INTO THE GRAND FINALS», 8,5 тыс. Следом был разгром 0:7.
+  - 08.12.2024, финальная точка титула: «왔냐?… 가즈아! 가즈아아아!… 레츠고!» (клип «the win»).
 - **«Это моя собака поставила 700pp» (11.02.2018).** На обвинения в читах он отвечает шуточным «признанием»: за него играла собака, «запрыгнула на стул и схватила мышку». Клип «공중참치 대리 플레이 자백».
 - **Первое апреля 2018: «mouse is my wife».** Шутит, что перешёл на планшет («I am friend with mouse too»). Через четыре месяца действительно перешёл.
 - **«Fiery» как сквозная линия.**
