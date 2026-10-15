@@ -1,4 +1,8 @@
-"""Main part of the FlyingTuna edit: beat-synced gameplay cuts 0:20.32-1:00.95 + the #1 calm 1:00.95-1:11.11.
+"""Main part of the FlyingTuna edit: beat-synced gameplay cuts 0:20.32-1:00.95 + the old calm 1:00.95-1:11.11.
+
+Milestone captions are drawn by ../captions/captions.py (Archivo Expanded Black label, gold JetBrains Mono date)
+and laid over their shots. The calm here is only a placeholder now: the finished edit takes segments 0-77 from
+this render and continues with build_ending.py (see build_full.py).
 
 usage: python -I build_main.py <workdir> [captions=1]
 Track: femtanyl - LOVESICK, CANNIBAL! (official 1:57 version), 189 BPM, grid from 0.000 s.
@@ -8,11 +12,13 @@ import os
 import subprocess
 import sys
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "captions"))
+import captions  # noqa: E402
+
 S = "/tmp/claude-0/-home-user-Claude-code/a61365b4-59b2-5d5f-8537-7f9c9b765619/scratchpad"
 LIB = "/home/user/Claude-code/osu-edit/clips/ft_library"
 MAIN = "/home/user/Claude-code/osu-edit/clips/ft_main"
 SONG = f"{S}/tracks_x/2143023/audio.mp3"
-FONT = f"{S}/fonts/LilitaOne.ttf"
 WORK = sys.argv[1]
 CAPS = (sys.argv[2] if len(sys.argv) > 2 else "1") == "1"
 os.makedirs(WORK, exist_ok=True)
@@ -117,19 +123,6 @@ for (b, n, *_), (b2, *__) in zip(slots, slots[1:]):
 assert slots[-1][0] + slots[-1][1] == END_BEAT
 
 
-def esc(s):  # values sit inside '...' in the filtergraph, so only the quote itself needs care
-    return s.replace("'", "’")
-
-
-def caption_filter(cap, date, t_in=0.0):
-    a = f"if(lt(t,{t_in}),0,min(1,(t-{t_in})*14))"
-    main = (f"drawtext=fontfile={FONT}:text='{esc(cap)}':fontsize=150:fontcolor=white:borderw=12:bordercolor=0x15121a"
-            f":shadowcolor=0x15121a:shadowx=0:shadowy=10:x=(w-tw)/2:y=h*0.20:alpha='{a}'")
-    sub = (f"drawtext=fontfile={FONT}:text='{esc(date)}':fontsize=60:fontcolor=0xffd84a:borderw=8:bordercolor=0x15121a"
-           f":x=(w-tw)/2:y=h*0.20+175:alpha='{a}'")
-    return main + "," + sub
-
-
 segs, cutlist = [], []
 for k, (b, n, item, cap, date, zoom) in enumerate(slots):
     f0, f1 = F(b) - F(B0), F(b + n) - F(B0)
@@ -144,18 +137,16 @@ for k, (b, n, item, cap, date, zoom) in enumerate(slots):
         vf = (f"fps=60,scale=3840:2160:flags=lanczos,zoompan=z='{z}':x='max(0,min(iw-iw/zoom,{cx * 2}-iw/zoom/2))'"
               f":y='max(0,min(ih-ih/zoom,{cy * 2}-ih/zoom/2))':d=1:s=1920x1080:fps=60,setsar=1")
     if cap and CAPS:
-        vf += "," + caption_filter(cap, date)
-    if k == len(slots) - 2 and CAPS:  # the #1 panel slides in 3.0 s into this shot
-        vf += "," + caption_filter("#1 IN THE WORLD", "11.02.2019", t_in=3.0)
-    if k == len(slots) - 1 and CAPS:
-        vf += "," + caption_filter("#1 IN THE WORLD", "11.02.2019")
-    cmd = ["ffmpeg", "-nostdin", "-v", "error", "-y", "-ss", f"{float(item['start']):.3f}", "-i", item["path"],
-           "-frames:v", str(nfr), "-vf", vf, "-an", "-c:v", "libx264", "-preset", "fast", "-crf", "14",
-           "-pix_fmt", "yuv420p", "-r", "60", out]
-    r = subprocess.run(cmd, capture_output=True, text=True)
-    if r.returncode != 0:
-        print("FAIL", k, r.stderr[-400:])
-        sys.exit(1)
+        captions.render(["-ss", f"{float(item['start']):.3f}", "-i", item["path"]], vf,
+                        captions.milestone_frames(cap, date, nfr), nfr, out)
+    else:
+        cmd = ["ffmpeg", "-nostdin", "-v", "error", "-y", "-ss", f"{float(item['start']):.3f}", "-i", item["path"],
+               "-frames:v", str(nfr), "-vf", vf, "-an", "-c:v", "libx264", "-preset", "fast", "-crf", "14",
+               "-pix_fmt", "yuv420p", "-r", "60", out]
+        r = subprocess.run(cmd, capture_output=True, text=True)
+        if r.returncode != 0:
+            print("FAIL", k, r.stderr[-400:])
+            sys.exit(1)
     segs.append(out)
     src = os.path.basename(item["path"])
     cutlist.append((k + 1, f"{T(b):.3f}", f"{T(b + n):.3f}", n, item.get("date", ""), item.get("title", cap or ""), src,
