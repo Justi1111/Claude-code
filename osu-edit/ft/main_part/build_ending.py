@@ -12,11 +12,12 @@ sound fade out over the last second.
 The "세계 1위 / #1 IN THE WORLD / 11.02.2019" plate (../captions/captions.py) fades in when the ranking panel comes up
 and he stares at it (clip 32.70), stays through his first scream and leaves before the second (from 38.60).
 
-Writes clip_1.mp4 (the clip with the plate, used by build_full.py) and ending.mp4, a preview from 0:56.18 with the
-last pounding cuts taken from the main part render.
+Writes clip_1.mp4 (the clip with the plate, used by build_full.py) and ending.mp4, a preview from 0:55.87 (the #4
+shot) with the last pounding cuts taken from the main part render.
 
 usage: FT_MAIN_WORK=<build_main.py workdir> python -I build_ending.py <workdir>
 """
+import csv
 import os
 import subprocess
 import sys
@@ -41,7 +42,7 @@ def F(b):
     return round(b * BEAT * FPS)
 
 
-B_START = 177
+B_START = 176                              # the #4 shot
 t_start = F(B_START) / FPS
 t_clip = F(192) / FPS                      # the calm: the #1 clip starts here
 CLIP_IN = RESULT_AT - (224 * BEAT - t_clip)
@@ -50,6 +51,16 @@ n_src = int(subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", 
                             "stream=nb_read_frames", "-of", "csv=p=0", CLIP], capture_output=True, text=True).stdout)
 n_clip = n_src - round(CLIP_IN * FPS) - 2  # to the end of the clip
 clip_dur = n_clip / FPS
+
+
+def main_segments(b0, b1=192):
+    """segments of the main part render from beat b0 (a cut) up to the calm."""
+    rows = list(csv.DictReader(open(f"{MAINW}/cutlist.tsv", encoding="utf-8"), delimiter="\t"))
+    t0, t1 = b0 * BEAT, b1 * BEAT
+    segs = [r for r in rows if t0 - 2e-3 <= float(r["track_start"]) < t1 - 2e-3]
+    assert segs and abs(float(segs[0]["track_start"]) - t0) < 2e-3, f"no cut at beat {b0}"
+    assert abs(float(segs[-1]["track_end"]) - t1) < 2e-3
+    return [f"{MAINW}/seg_{int(r['n']) - 1:03d}.mp4" for r in segs]
 
 
 def build_clip(work):
@@ -79,7 +90,7 @@ if __name__ == "__main__":
     WORK = sys.argv[1]
     os.makedirs(WORK, exist_ok=True)
     clip_out = build_clip(WORK)
-    segs = [f"{MAINW}/seg_{k:03d}.mp4" for k in range(68, 78)] + [clip_out]
+    segs = main_segments(B_START) + [clip_out]
     with open(f"{WORK}/concat.txt", "w") as f:
         for s in segs:
             f.write(f"file '{s}'\n")

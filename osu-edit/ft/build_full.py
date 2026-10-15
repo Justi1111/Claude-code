@@ -1,6 +1,6 @@
 """The whole FlyingTuna edit: track 0:15.23 to the end of the #1 clip.
 
-Picture: intro (intro_clip/build_intro.sh: the end of the achieve-list clip) -> main part segments 0-77
+Picture: intro (intro_clip/build_intro.sh: the end of the achieve-list clip) -> the main part cuts up to the calm
 (main_part/build_main.py) -> the #1 clip with its plate (main_part/build_ending.py).
 Sound: the song from 0:15.23 (ducked and muffled under the intro, full from the drop at 0:20.32, lower in the calm,
 gone by 1:07.30 when the map ends in the #1 clip), his achieve-list voice with the scream running over the drop, and
@@ -24,7 +24,7 @@ VOICE_IN, VOICE_OUT = 15.201333, 20.75   # achieve-list clip; track = clip + 0.0
 
 out = sys.argv[1]
 work = os.path.dirname(os.path.abspath(out))
-segs = [INTRO_V] + [f"{E.MAINW}/seg_{k:03d}.mp4" for k in range(78)] + [f"{ENDW}/clip_1.mp4"]
+segs = [INTRO_V] + E.main_segments(64) + [f"{ENDW}/clip_1.mp4"]
 with open(f"{work}/full_concat.txt", "w") as f:
     for s in segs:
         f.write(f"file '{s}'\n")
