@@ -4,7 +4,7 @@ Picture: intro (intro_clip/build_intro.sh: the end of the achieve-list clip) -> 
 (main_part/build_main.py) -> the #1 clip with its plate (main_part/build_ending.py).
 Sound: the song from 0:15.23 (ducked and muffled under the intro, full from the drop at 0:20.32, lower in the calm,
 gone by 1:07.30 when the map ends in the #1 clip), his achieve-list voice with the scream running over the drop, and
-the #1 clip's own sound from the calm on, and his "NUMBER ONE!" over the black at the end.
+the #1 clip's own sound from the calm on.
 
 usage: FT_MAIN_WORK=<build_main.py workdir> FT_END_WORK=<build_ending.py workdir> python -I build_full.py <out.mp4>
 """
@@ -44,9 +44,8 @@ fc = (f"[1:a]asplit=2[sa][sb];"
       f"acompressor=threshold=0.1:ratio=4:attack=5:release=150:makeup=2,volume=4dB,"
       f"afade=t=out:st={VOICE_OUT - VOICE_IN - 0.2:.4f}:d=0.2[vo];"
       f"[3:a]{E.clip_audio_chain(calm_out, 'clip')};"
-      f"[4:a]{E.shout_chain(calm_out, 'shout')};"
-      f"[song][vo][clip][shout]amix=inputs=4:normalize=0:duration=longest,alimiter=limit=0.9:level=false,apad[a]")
-subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-y", "-i", video, "-i", E.SONG, "-i", ACHIEVE, "-i", E.CLIP, "-i", E.PAR,
+      f"[song][vo][clip]amix=inputs=3:normalize=0:duration=longest,alimiter=limit=0.9:level=false,apad[a]")
+subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-y", "-i", video, "-i", E.SONG, "-i", ACHIEVE, "-i", E.CLIP,
                 "-filter_complex", fc, "-map", "0:v", "-map", "[a]", "-c:v", "copy", "-c:a", "aac", "-b:a", "256k",
                 "-shortest", "-movflags", "+faststart", out], check=True)
 n = 305 + (E.F(192) - E.F(64)) + E.n_total

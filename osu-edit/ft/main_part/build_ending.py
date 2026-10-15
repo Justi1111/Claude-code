@@ -1,11 +1,10 @@
-"""Ending of the FlyingTuna edit: the real #1 moment as one uncut piece, then his "NUMBER ONE!" over black.
+"""Ending of the FlyingTuna edit: the real #1 moment as one uncut piece, fading to black.
 
 From the calm (1:00.952) the clip "топ 1" (Super Driver [Fiery's Extreme] HDDT, 778pp, 11.02.2019 22:57 KST) runs
 uncut from its last spinner: the result screen, he stares at the ranking panel, pulls the headphones off, drops onto
 the desk screaming and lies there. The in-point keeps the result screen on 1:11.11 as before. While he lies on the
-desk the picture and its sound fade to black (clip 52.7-53.7, about 1:17.4-1:18.4 of the edit); after half a second
-of silence his "NUMBER ONE!" from the clip with the Super Driver result screen (shot a minute later) plays over the
-black, and the edit ends a beat after it.
+desk the picture and its sound fade to black (clip 52.7-53.7, about 1:17.4-1:18.4 of the edit), and the edit ends
+0.6 s later.
 
 Sound: the song plays on for 4.5 s of the calm and fades over the next two bars, gone by 1:07.30 when the map ends
 in the clip (the playfield fades at clip 27.0-27.25); after that only the clip's own sound.
@@ -31,9 +30,7 @@ LIB = "/home/user/Claude-code/osu-edit/clips/ft_library/03_number_one_2019-02-11
 MAINW = os.environ.get("FT_MAIN_WORK", "/home/user/Claude-code/osu-edit/out/ft_main_v6/work")
 SONG = f"{S}/tracks_x/2143023/audio.mp3"
 CLIP = f"{LIB}/2019-02-11_top1_moment_60s.mp4"
-PAR = f"{LIB}/2019-02-11_i_will_go_to_say_to_my_parents.mp4"
-SHOUT_IN, SHOUT_OUT = 16.02, 17.35   # "NUMBER ONE!" (whisper: 15.80-17.12, the loud part 16.12-17.05)
-SHOUT_GAP, TAIL = 0.35, 0.9          # silence before it, black after it
+TAIL = 0.6                           # black after the fade
 CLIP_FADE_AT = 52.70                 # he lies on the desk; the picture starts to go
 RESULT_AT = 31.167           # result screen appears in the clip (scene change)
 PANEL_AT = 32.70             # the online ranking panel is up and he stares at it
@@ -54,7 +51,7 @@ CLIP_IN = RESULT_AT - (224 * BEAT - t_clip)
 MUSIC_HOLD, MUSIC_GONE = 206 * BEAT, 212 * BEAT
 n_clip = round((CLIP_FADE_AT + END_FADE - CLIP_IN) * FPS)   # up to black
 clip_dur = n_clip / FPS
-n_total = n_clip + round((SHOUT_GAP + SHOUT_OUT - SHOUT_IN + TAIL) * FPS)
+n_total = n_clip + round(TAIL * FPS)
 total_dur = n_total / FPS
 
 
@@ -73,7 +70,7 @@ def build_clip(work):
     off = round((PANEL_AT - CLIP_IN) * FPS)
     n_plate = round((PLATE_OUT + captions.P_OUT - PANEL_AT) * FPS) + 2
     vf = "fps=60,scale=1920:1080:flags=lanczos,setsar=1"
-    post = f"fade=t=out:st={clip_dur - END_FADE:.3f}:d={END_FADE}"   # stays black after it, under the shout
+    post = f"fade=t=out:st={clip_dur - END_FADE:.3f}:d={END_FADE}"   # stays black after it
     captions.render(["-ss", f"{CLIP_IN:.3f}", "-i", CLIP], vf, captions.plate_frames(n_plate, PLATE_OUT - PANEL_AT),
                     n_total, out, offset=off, post=post)
     return out
@@ -91,13 +88,6 @@ def clip_audio_chain(delay_s, label):
             f"afade=t=out:st={clip_dur - END_FADE:.4f}:d={END_FADE},adelay=delays={int(round(delay_s * 1000))}:all=1[{label}]")
 
 
-def shout_chain(delay_s, label):
-    """his "NUMBER ONE!" over the black; delay_s is where the #1 clip starts in the output."""
-    d = SHOUT_OUT - SHOUT_IN
-    at = delay_s + clip_dur + SHOUT_GAP
-    return (f"atrim={SHOUT_IN:.3f}:{SHOUT_OUT:.3f},asetpts=PTS-STARTPTS,aresample=48000,volume=-2dB,"
-            f"afade=t=in:d=0.02,afade=t=out:st={d - 0.2:.3f}:d=0.2,adelay=delays={int(round(at * 1000))}:all=1[{label}]")
-
 
 if __name__ == "__main__":
     WORK = sys.argv[1]
@@ -111,10 +101,9 @@ if __name__ == "__main__":
     subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", f"{WORK}/concat.txt",
                     "-c", "copy", video], check=True)
     fc = (f"[1:a]{song_chain(t_start, 'song')};[2:a]{clip_audio_chain(t_clip - t_start, 'clip')};"
-          f"[3:a]{shout_chain(t_clip - t_start, 'shout')};"
-          f"[song][clip][shout]amix=inputs=3:normalize=0:duration=longest,alimiter=limit=0.9:level=false,apad[a]")
+          f"[song][clip]amix=inputs=2:normalize=0:duration=longest,alimiter=limit=0.9:level=false,apad[a]")
     final = f"{WORK}/ending.mp4"
-    subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-y", "-i", video, "-i", SONG, "-i", CLIP, "-i", PAR, "-filter_complex", fc,
+    subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-y", "-i", video, "-i", SONG, "-i", CLIP, "-filter_complex", fc,
                     "-map", "0:v", "-map", "[a]", "-c:v", "copy", "-c:a", "aac", "-b:a", "256k", "-shortest",
                     "-movflags", "+faststart", final], check=True)
     print("ending", round(t_clip - t_start + total_dur, 3), "s from track", round(t_start, 3), "clip frames", n_total, "->", final)
