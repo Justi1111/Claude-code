@@ -192,7 +192,7 @@ def main():
     out = sys.argv[2]
     workers = int(sys.argv[3]) if len(sys.argv) > 3 else 4
     total = count_frames(src)
-    tmp = out + ".parts"
+    tmp = os.path.abspath(out) + ".parts"   # absolute: the concat list resolves paths from its own folder
     os.makedirs(tmp, exist_ok=True)
     bounds = [round(i * total / workers) for i in range(workers + 1)]
     jobs = [(src, f"{tmp}/part{i}.mp4", bounds[i], bounds[i + 1] - bounds[i], total) for i in range(workers)]
