@@ -71,6 +71,11 @@ def _clip_index():
 clip_slug, clip_time = _clip_index()
 
 
+def item_time(it):
+    """when a shot happened: its own ts if it has one (footage from outside the Twitch catalog), else its clip's time."""
+    return it.get("ts") or clip_time(it["path"])
+
+
 def spread(items, n):
     """n items spread over the period: split the time-sorted list into n buckets, take the best-scored of each."""
     items = sorted(items, key=lambda r: (clip_time(r["path"]), float(r["start"])))
@@ -106,7 +111,11 @@ POST2 = [at(257, 1.2), at(259, 2.2), at(259, 9.2), at(253, 0.2)]
 MS = {
     "726": dict(path=f"{MAIN}/20180513_CourageousChillyNigiriPeanutButterJellyTime.mp4", start=35.3, cap="726PP", date="13.05.2018"),
     "tab": dict(path=f"{LIB}/01_2018_mouse_to_tablet/2018-07-20_almost_adapted_tablet.mp4", start=16.0, cap="TABLET", date="2018", zoom=(1727, 967, 2.6)),
-    "800": dict(path=f"{LIB}/02_road_to_1/2018-11-25_first_800pp_play.mp4", start=36.9, cap="FIRST 800PP", date="25.11.2018"),
+    # the Twitch clip of the 800pp play stops at the end of the map; the result screen comes from the stream recording
+    # on YouTube (Circle People, ObzZQBtWkFE, 2:16), played 25.11.2018 20:00:37 KST
+    "800": dict(path=f"{LIB}/02_road_to_1/2018-11-25_first_800pp_result_youtube.mp4", start=0.0, cap="FIRST 800PP",
+                date="25.11.2018", ts=clip_time(f"{LIB}/02_road_to_1/2018-11-25_first_800pp_play.mp4") + 2,
+                url="https://www.youtube.com/watch?v=ObzZQBtWkFE"),
     "10": dict(path=f"{LIB}/02_road_to_1/2018-12-16_top10_global.mp4", start=27.2, cap="TOP 10", date="16.12.2018"),
     "4": dict(path=f"{LIB}/02_road_to_1/2018-12-26_14k_pp.mp4", start=45.2, cap="#4 · 14,000PP", date="26.12.2018"),
     "2": dict(path=f"{LIB}/02_road_to_1/2019-02-10_number2_lets_go.mp4", start=17.6, cap="#2", date="11.02.2019"),
@@ -166,14 +175,14 @@ assert (len(B3), len(B4), len(POST2)) == (7, 5, 4), (len(B3), len(B4), len(POST2
 for (b, n, *_), (b2, *__) in zip(slots, slots[1:]):
     assert b + n == b2, (b, n, b2)
 assert slots[-1][0] + slots[-1][1] == END_BEAT
-order = [(clip_time(it["path"]), float(it["start"])) for b, n, it, *_ in slots if b < 192]
+order = [(item_time(it), float(it["start"])) for b, n, it, *_ in slots if b < 192]
 bad = [k + 1 for k in range(1, len(order)) if order[k] < order[k - 1]]
 assert not bad, f"clip time goes backwards at slots {bad}"
 if os.environ.get("FT_PLAN_ONLY"):
     import datetime
     kst = datetime.timezone(datetime.timedelta(hours=9))
     for k, (b, n, it, cap, *_) in enumerate(slots):
-        t = datetime.datetime.fromtimestamp(clip_time(it["path"]), kst).strftime("%d.%m.%Y %H:%M")
+        t = datetime.datetime.fromtimestamp(item_time(it), kst).strftime("%d.%m.%Y %H:%M")
         print(f"{k + 1:3d} {T(b):7.3f} {n:2d}b {t} {float(it['start']):6.2f} {cap or '':14s} {it.get('title', '')[:40]}")
     sys.exit(0)
 
@@ -205,7 +214,7 @@ for k, (b, n, item, cap, date, zoom) in enumerate(slots):
     segs.append(out)
     src = os.path.basename(item["path"])
     cutlist.append((k + 1, f"{T(b):.3f}", f"{T(b + n):.3f}", n, item.get("date", ""), item.get("title", cap or ""), src,
-                    f"{float(item['start']):.2f}", cap or "", f"https://www.twitch.tv/flyingtuna/clip/{clip_slug(item['path'])}"))
+                    f"{float(item['start']):.2f}", cap or "", item.get("url") or f"https://www.twitch.tv/flyingtuna/clip/{clip_slug(item['path'])}"))
 
 with open(f"{WORK}/concat.txt", "w") as f:
     for s in segs:

@@ -5,7 +5,8 @@ A look on every frame: a gentle S-curve and a little more colour, bloom on the h
   - 726PP, FIRST 800PP, TOP 10, #4 and #2 land with a punch-in, a white flash, a colour split and a short shake,
   - the TABLET bar, where the beat drops out, gets only a soft flash,
   - the cut right before each of them glitches for three frames (slices shifted sideways, channels apart).
-The calm opens on a soft white flash; from there only the look, so the #1 clip stays as it is.
+The cut into the #1 clip glitches too and lands hard: a bright flash that clears over a quarter second, a burst of
+bloom, a colour split and a slow pull back from 6% closer over about a second; from there only the look.
 
 usage: FT_MAIN_WORK=<build_main.py workdir> python -I polish.py <in.mp4> <out.mp4> [workers]
        ... polish.py <in.mp4> --stills <frame,frame,...> <outdir>     before/after PNGs of single frames
@@ -42,6 +43,7 @@ def timeline(n):
             if i:
                 events.append((F(cuts[i - 1]) - F0, "glitch"))
     events.append((F(CALM) - F0, "calm"))
+    events.append((F(cuts[-1]) - F0, "glitch"))
 
     p = {k: np.zeros(n, np.float32) for k in ("punch", "expo", "flash", "chroma", "shake", "bloom")}
     glitch = np.zeros(n, np.int32)
@@ -49,7 +51,7 @@ def timeline(n):
     env = {  # kind: {param: (amount, decay in frames)}
         "milestone": dict(punch=(0.07, 4), expo=(0.10, 3), flash=(0.32, 2.2), chroma=(7, 3), shake=(7, 4), bloom=(0.30, 5)),
         "soft": dict(expo=(0.05, 4), flash=(0.15, 4)),
-        "calm": dict(expo=(0.05, 6), flash=(0.35, 7)),
+        "calm": dict(punch=(0.06, 25), expo=(0.12, 8), flash=(0.85, 9), chroma=(9, 8), bloom=(0.60, 30)),
     }
     for f0, kind in events:
         if kind == "glitch":
