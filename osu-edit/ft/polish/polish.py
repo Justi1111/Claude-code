@@ -1,12 +1,10 @@
 """Polish pass over the finished FlyingTuna edit (build_full.py output).
 
 A look on every frame: a gentle S-curve and a little more colour, bloom on the highlights (hit circles, cursor, the
-#1 plate), a soft vignette and fine grain. In the pounding part (0:20.32-1:00.95) everything follows the beat grid:
-  - every cut punches in a few percent with a short exposure kick and a thin colour split,
-  - the other beats pulse very lightly (the kick is on every beat),
-  - phrase downbeats and milestones hit harder: bigger punch, white flash, wider colour split, a short shake,
-  - the drop hits hardest; the TABLET bar, where the beat drops out, gets only a soft flash,
-  - the cut right before each downbeat glitches for three frames (slices shifted sideways, channels apart).
+#1 plate), a soft vignette and fine grain. The ordinary cuts get nothing else; only the milestones hit:
+  - 726PP, FIRST 800PP, TOP 10, #4 and #2 land with a punch-in, a white flash, a colour split and a short shake,
+  - the TABLET bar, where the beat drops out, gets only a soft flash,
+  - the cut right before each of them glitches for three frames (slices shifted sideways, channels apart).
 The calm opens on a soft white flash; from there only the look, so the #1 clip stays as it is.
 
 usage: FT_MAIN_WORK=<build_main.py workdir> python -I polish.py <in.mp4> <out.mp4> [workers]
@@ -25,7 +23,7 @@ W, H, FPS = 1920, 1080, 60
 BEAT = 60 / 189
 F0 = 914                      # track frame of the edit's first frame (0:15.233)
 MAINW = os.environ.get("FT_MAIN_WORK", "/home/user/Claude-code/osu-edit/out/ft_main_v7/work")
-ACCENTS = {80, 96, 112, 132, 148, 164, 176, 186}   # phrase downbeats and milestones
+MILESTONES = {96, 148, 164, 176, 186}   # 726PP, FIRST 800PP, TOP 10, #4, #2
 DROP, TABLET, CALM = 64, 128, 192
 
 
@@ -37,27 +35,19 @@ def timeline(n):
     """per-frame effect amounts for an edit of n frames."""
     rows = list(csv.DictReader(open(f"{MAINW}/cutlist.tsv", encoding="utf-8"), delimiter="\t"))
     cuts = sorted({round(float(r["track_start"]) / BEAT) for r in rows if float(r["track_start"]) < CALM * BEAT - 1e-3})
-    cut_set = set(cuts)
-    glitch_beats = {cuts[i] for i in range(len(cuts) - 1) if cuts[i + 1] in ACCENTS | {TABLET}} | {cuts[-1]}
     events = []  # (frame, kind)
-    for b in cuts:
-        kind = "drop" if b == DROP else "soft" if b == TABLET else "accent" if b in ACCENTS else "cut"
-        events.append((F(b) - F0, kind))
-        if b in glitch_beats:
-            events.append((F(b) - F0, "glitch"))
-    for b in range(DROP, CALM):
-        if b not in cut_set and not (TABLET <= b < TABLET + 4):
-            events.append((F(b) - F0, "pulse"))
+    for i, b in enumerate(cuts):
+        if b in MILESTONES or b == TABLET:
+            events.append((F(b) - F0, "milestone" if b in MILESTONES else "soft"))
+            if i:
+                events.append((F(cuts[i - 1]) - F0, "glitch"))
     events.append((F(CALM) - F0, "calm"))
 
     p = {k: np.zeros(n, np.float32) for k in ("punch", "expo", "flash", "chroma", "shake", "bloom")}
     glitch = np.zeros(n, np.int32)
     d = np.arange(n, dtype=np.float32)
     env = {  # kind: {param: (amount, decay in frames)}
-        "cut": dict(punch=(0.035, 3.5), expo=(0.05, 2.5), chroma=(1.5, 2.5), bloom=(0.10, 4)),
-        "pulse": dict(punch=(0.012, 3.0), expo=(0.02, 2.5)),
-        "accent": dict(punch=(0.07, 4), expo=(0.10, 3), flash=(0.32, 2.2), chroma=(7, 3), shake=(7, 4), bloom=(0.30, 5)),
-        "drop": dict(punch=(0.11, 5), expo=(0.15, 3), flash=(0.65, 3), chroma=(12, 4), shake=(10, 5), bloom=(0.40, 6)),
+        "milestone": dict(punch=(0.07, 4), expo=(0.10, 3), flash=(0.32, 2.2), chroma=(7, 3), shake=(7, 4), bloom=(0.30, 5)),
         "soft": dict(expo=(0.05, 4), flash=(0.15, 4)),
         "calm": dict(expo=(0.05, 6), flash=(0.35, 7)),
     }
