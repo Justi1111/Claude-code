@@ -141,11 +141,11 @@ def _fly_shape(shape):
     return _ramp(h, w, bottom=0.12)
 
 
-@_versioned(2)
+@_versioned(4)
 def _scream_shape(shape):
     """keep the screaming head, fade out his shoulder and arm on the right."""
     h, w = shape
-    return _ramp(h, w, right=0.62)
+    return _ramp(h, w, right=0.62, bottom=0.15)
 
 
 @_versioned(2)
@@ -177,7 +177,7 @@ CUTS = dict(
     arm_c=dict(vid="ncop_kickback", t0=72.62, lo=0.45, hi=0.85, erode=2, keep_largest=True),
     swing=dict(vid="pv_main_2022", t0=91.45),
     face=dict(vid="ncop_kickback", t0=27.90, mask_fn=_face_shape),
-    scream=dict(vid="pv_main_2022", t0=53.45, erode=2, keep_largest=True, mask_fn=_scream_shape),
+    scream=dict(vid="pv_main_2022", t0=53.45, erode=2, keep_largest=True, mask_fn=_scream_shape, holes=True),
     sawarm=dict(vid="ncop_kickback", t0=72.45, crop=(100, 430, 1050, 800), erode=2, mask_fn=_sawarm_shape),
     finger=dict(vid="pv_main_2022", t0=84.50),
     power_cu=dict(vid="nced12_fight_song", t0=1.40, t1=1.90),
@@ -240,7 +240,7 @@ def _bright_tint(rgba, col):
     lo, hi = np.percentile(g[rgba[..., 3] > 128], [3, 97]) if (rgba[..., 3] > 128).any() else (0, 255)
     gn = np.clip((g - lo) / max(hi - lo, 1), 0, 1)
     c = np.array(col, np.float32)[None, None]
-    out = c * (0.62 + 0.50 * gn[..., None])
+    out = c * (0.80 + 0.30 * gn[..., None]) + (1 - c) * 0.25 * gn[..., None]
     return np.dstack([(np.clip(out, 0, 1) * 255).astype(np.uint8), rgba[..., 3]])
 
 

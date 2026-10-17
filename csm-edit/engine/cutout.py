@@ -60,6 +60,21 @@ def grabcut(rgb, rect, init=None, iters=6):
     return cv2.GaussianBlur(a, (0, 0), 1.0)
 
 
+def fill_holes(a):
+    """set enclosed transparent regions (holes inside the subject) to opaque."""
+    m = (a > 0.5).astype(np.uint8)
+    h, w = m.shape
+    ff = m.copy()
+    mask = np.zeros((h + 2, w + 2), np.uint8)
+    for x, y in ((0, 0), (w - 1, 0), (0, h - 1), (w - 1, h - 1)):
+        if ff[y, x] == 0:
+            cv2.floodFill(ff, mask, (x, y), 2)
+    holes = ff == 0
+    out = a.copy()
+    out[holes] = 1.0
+    return out
+
+
 def refine(alpha, rgb=None, erode=1, feather=0.8, lo=0.25, hi=0.75, min_comp=0.02, keep_largest=False):
     """tighten a soft matte: contrast-stretch, small erode, light feather, drop specks / stray islands."""
     a = np.clip((alpha - lo) / (hi - lo), 0, 1)
@@ -102,12 +117,12 @@ class Cut:
     """frames of a cut-out. cut.frames[i] = RGBA uint8 (cropped), cut.offsets[i] = (x, y) of the crop in the source."""
 
     def __init__(self, vid, t0, t1=None, fps=12, crop=None, erode=1, feather=0.8, lo=0.25, hi=0.75, mask_fn=None,
-                 name=None, gc_rect=None, gc_seed=False, min_comp=0.02, keep_largest=False):
+                 name=None, gc_rect=None, gc_seed=False, min_comp=0.02, keep_largest=False, holes=False):
         self.vid, self.t0, self.t1 = vid, t0, (t1 if t1 is not None else t0 + 0.5 / fps)
         self.fps = fps
         key = json.dumps([vid, round(t0, 3), round(self.t1, 3), fps, crop, erode, feather, lo, hi, name, gc_rect, gc_seed,
-                          min_comp, keep_largest, getattr(mask_fn, "version", None)], sort_keys=True)
-        self.min_comp, self.keep_largest = min_comp, keep_largest
+                          min_comp, keep_largest, getattr(mask_fn, "version", None), holes], sort_keys=True)
+        self.min_comp, self.keep_largest, self.holes = min_comp, keep_largest, holes
         self.gc_rect, self.gc_seed = gc_rect, gc_seed
         self.key = (name + "_" if name else "") + hashlib.md5(key.encode()).hexdigest()[:10]
         self.dir = f"{CACHE}/{self.key}"
@@ -144,6 +159,8 @@ class Cut:
         for i, (f, a) in enumerate(zip(frames, sm)):
             sub = f[y0:y1, x0:x1]
             a = refine(a, sub, erode, feather, lo, hi, self.min_comp, self.keep_largest)
+            if self.holes:
+                a = fill_holes(a)
             if mask_fn is not None:
                 a = a * mask_fn(sub.shape[:2])
             ys, xs = np.where(a > 0.03)

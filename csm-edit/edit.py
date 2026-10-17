@@ -125,10 +125,10 @@ def s01_sketch(c):
     rng = np.random.default_rng(5)
     # heavy charcoal clumps condensing onto the two figures
     for j, (tx, ty) in enumerate(duo_points()):
-        sx, sy = tx + rng.normal(0, 330), ty + rng.normal(0, 230)
+        sx, sy = tx + rng.normal(0, 300), ty + rng.normal(0, 200)
         x, y = mix(sx, tx, out_cubic(k)), mix(sy, ty, out_cubic(k))
-        r = mix(rng.uniform(30, 110), rng.uniform(6, 16), k)
-        cv.drawCircle(float(x), float(y), float(r), paint((0.20, 0.19, 0.18), rng.uniform(0.35, 0.7) * (1 - 0.6 * k), blur=r * 0.45))
+        r = mix(rng.uniform(14, 48), rng.uniform(4, 10), k)
+        cv.drawCircle(float(x), float(y), float(r), paint((0.20, 0.19, 0.18), rng.uniform(0.45, 0.8) * (1 - 0.6 * k), blur=r * 0.25))
         for _ in range(6):
             cv.drawCircle(float(x + rng.normal(0, r)), float(y + rng.normal(0, r)), float(rng.uniform(1, 3.5)),
                           paint((0.15, 0.14, 0.13), rng.uniform(0.3, 0.8)))
@@ -802,14 +802,15 @@ def p26(rgb_, c):
 # ================================================================================================= 24.00 - 26.40 echoes, glitch
 
 def echoes(cv, t, kind, n):
+    """flat-tinted copies of the screaming head fanned out at 14% W, full-colour head on top."""
     sp = W * 0.14
     order = sorted(range(-n // 2, n - n // 2), key=lambda q: -abs(q))
     for q in order:
         if q == 0:
             continue
-        jy = np.random.default_rng(q * 7 + int(step(t) * 12)).uniform(-14, 14)
-        put(cv, "scream", W * 0.5 + q * sp, H + 4 + jy, 0.66, treat=kind if q % 2 else kind + "2", anchor=(0.5, 1.0))
-    put(cv, "scream", W * 0.5, H + 4, 0.76, treat="lift", anchor=(0.5, 1.0))
+        jy = np.random.default_rng(q * 7 + int(step(t) * 12)).uniform(-18, 18)
+        put(cv, "scream", W * 0.47 + q * sp, H * 0.92 + jy, 0.58, treat=kind if q % 2 else kind + "2", anchor=(0.42, 1.0))
+    put(cv, "scream", W * 0.47, H * 1.03, 0.72, treat="lift", anchor=(0.42, 1.0))
 
 
 @tl.scene(24.00, 24.70)
