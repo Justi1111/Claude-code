@@ -543,8 +543,8 @@ class Frame:
         self.surface = skia.Surface(W, H)
         self.cv = self.surface.getCanvas()
 
-    def clear(self, rgb=BG):
-        self.cv.clear(c4(rgb))
+    def clear(self, rgb=None):
+        self.cv.clear(c4(BG if rgb is None else rgb))
         return self.cv
 
     def array(self):

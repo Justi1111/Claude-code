@@ -30,7 +30,7 @@ FONT_MONO = f"{A}/fonts/JetBrainsMono-400.ttf"
 AUDIO = f"{SCRATCH}/ref/ref.mp4"
 END = 34.40
 
-core.BG = (251 / 255,) * 3
+core.BG = (251 / 255,) * 3     # read at clear() time
 
 
 def rgb(hexs):
@@ -82,6 +82,12 @@ def _edge_fade(shape):
     return (side * bottom).astype(np.float32)
 
 
+def _arm_shape(shape):
+    m = np.ones(shape, np.float32)
+    m[int(shape[0] * 0.45):, int(shape[1] * 0.78):] = 0
+    return m
+
+
 def _head_shape(shape):
     m = np.ones(shape, np.float32)
     m[:200, :740] = 0
@@ -107,7 +113,7 @@ CUTS = dict(
     power_fly=dict(vid="ncop_kickback", t0=56.40),
     saw=dict(vid="pv_main_2022", t0=72.00),
     pochita=dict(vid="cpv_denji", t0=10.90, crop=(0, 0, 1920, 985), gc_rect=(430, 0, 1380, 985), mask_fn=_pochita_shape),
-    arm=dict(vid="ncop_kickback", t0=72.20, t1=72.70, lo=0.45, hi=0.85, erode=2),
+    arm=dict(vid="ncop_kickback", t0=72.20, t1=72.70, lo=0.45, hi=0.85, erode=2, mask_fn=_arm_shape),
     swing=dict(vid="pv_main_2022", t0=91.45),
     face=dict(vid="ncop_kickback", t0=27.90),
     scream=dict(vid="pv_main_2022", t0=53.20, t1=53.70, crop=(150, 100, 1250, 1080), mask_fn=_edge_fade),
@@ -165,6 +171,22 @@ def _mono(rgba, contrast=1.25, tex_kind="paper", seed=0):
     g = g * (0.75 + 0.25 * tt / max(tt.mean(), 1e-3))
     v = (np.clip(g, 0, 1) * 255).astype(np.uint8)
     return np.dstack([v, v, v, rgba[..., 3]])
+
+
+def _bright_tint(rgba, col):
+    """bright flat single-hue tint keeping the drawing (the reference's mint/cyan afterimages)."""
+    g = cv2.cvtColor(rgba[..., :3], cv2.COLOR_RGB2GRAY).astype(np.float32)
+    lo, hi = np.percentile(g[rgba[..., 3] > 128], [3, 97]) if (rgba[..., 3] > 128).any() else (0, 255)
+    gn = np.clip((g - lo) / max(hi - lo, 1), 0, 1)
+    c = np.array(col, np.float32)[None, None]
+    out = c * (0.62 + 0.50 * gn[..., None])
+    return np.dstack([(np.clip(out, 0, 1) * 255).astype(np.uint8), rgba[..., 3]])
+
+
+def _lift(rgba, gamma=0.7):
+    out = rgba.copy()
+    out[..., :3] = (255 * np.power(rgba[..., :3] / 255.0, gamma)).astype(np.uint8)
+    return out
 
 
 def _steel(rgba, seed=0):
@@ -273,11 +295,13 @@ TREAT = {
     "green": lambda f, i: fx.tint(f, rgb("6BE36B"), 0.9),
     "purple": lambda f, i: _thermal(f, cv2.COLORMAP_PLASMA),
     "navy": lambda f, i: _flat(f, rgb("1C2340"), 0.75),
-    "mint": lambda f, i: _flat(f, MINT, 0.55),
-    "mint2": lambda f, i: _flat(f, MINT2, 0.55),
-    "cyan": lambda f, i: _flat(f, ECHO_CY, 0.55),
-    "cyan2": lambda f, i: _flat(f, ECHO_CY2, 0.55),
+    "mint": lambda f, i: _bright_tint(f, MINT),
+    "mint2": lambda f, i: _bright_tint(f, MINT2),
+    "cyan": lambda f, i: _bright_tint(f, ECHO_CY),
+    "cyan2": lambda f, i: _bright_tint(f, ECHO_CY2),
+    "lift": lambda f, i: _lift(f, 0.62),
     "white": lambda f, i: _silhouette(f),
+    "dilate": lambda f, i: np.dstack([f[..., :3], cv2.dilate(f[..., 3], np.ones((25, 25), np.uint8))]),
     "olive": lambda f, i: fx.tint(f, rgb("8A8F5A"), 0.55),
     "steel": lambda f, i: _steel(f, i),
 }
@@ -535,7 +559,8 @@ def recolor(rgb_, col, amount=1.0):
 # ================================================================================================= SCENES
 # times are edit seconds; reference cadence: motion on twos (12 fps), flashes at full rate.
 
-DUO_H = 0.30          # seated duo height (fraction of H)
+DUO_H = 0.32          # seated duo height (fraction of H)
+DUO_GAP = 0.45        # how much of the bench gap between them to close
 DUO_CX, DUO_BOT = 0.485 * W, 0.85 * H
 WORDS = [("still", 0.25, 0.50), ("fight", 0.55, 0.80), ("and", 0.85, 1.00), ("i", 1.05, 1.20),
          ("don’t", 1.25, 1.50), ("know", 1.55, 1.80), ("why", 1.85, 2.60)]
@@ -561,12 +586,11 @@ def draw_duo(cv, treat=None, alpha=1.0, left=True, right=True, dissolve=None):
     s = DUO_H * H / f.shape[0]
     x0 = DUO_CX - f.shape[1] * s / 2
     y0 = DUO_BOT - f.shape[0] * s
-    if left and right and dissolve is None:
-        draw_image(cv, img("duo", 0, treat), x0, y0, s, anchor=(0, 0), alpha=alpha)
-        return
     L, R, mid = duo_halves()
+    shift = f.shape[1] * s * 0.18 * DUO_GAP           # slide the two halves toward each other
+    x0r, x0 = x0 - shift, x0 + shift
     if right:
-        draw_image(cv, _cached_img(("duoR", treat), lambda: TREAT[treat](R, 0)), x0, y0, s, anchor=(0, 0), alpha=alpha)
+        draw_image(cv, _cached_img(("duoR", treat), lambda: TREAT[treat](R, 0)), x0r, y0, s, anchor=(0, 0), alpha=alpha)
     if left:
         if dissolve is None:
             draw_image(cv, _cached_img(("duoL", treat), lambda: TREAT[treat](L, 0)), x0, y0, s, anchor=(0, 0), alpha=alpha)
@@ -608,7 +632,6 @@ def s01_sketch(c):
     cv = c.cv
     full_bg(cv, paper_bg())
     k = clamp01(c.lt / 0.20)
-    im = img("duo", 0, "pencil")
     f = cut("duo").frames[0]
     s = DUO_H * H / f.shape[0]
     # charcoal particles condensing into the sketch
@@ -618,7 +641,9 @@ def s01_sketch(c):
         x = DUO_CX + rng.normal(0, 260 * (1 - k) + 40)
         y = DUO_BOT - DUO_H * H * 0.5 + rng.normal(0, 200 * (1 - k) + 30)
         cv.drawCircle(float(x), float(y), float(rng.uniform(0.8, 2.6)), paint((0.25, 0.24, 0.23), rng.uniform(0.2, 0.7)))
-    draw_image(cv, im, DUO_CX - f.shape[1] * s / 2, DUO_BOT - f.shape[0] * s, s, anchor=(0, 0), alpha=smooth(k))
+    layer(cv, alpha=smooth(k))
+    draw_duo(cv, treat="pencil")
+    cv.restore()
 
 
 @tl.scene(0.25, 2.65)
@@ -710,7 +735,7 @@ def draw_hand_with_strokes(cv, treat="stonehand", strokes_p=1.0, rot=0.0, scale=
 def s05_hand_strokes(c):
     lt = step(c.lt)
     rk = out_cubic(clamp01(lt / 0.5))
-    draw_hand_with_strokes(c.cv, strokes_p=out_cubic(clamp01((c.lt - 0.10) / 0.30)), rot=45 * rk - 10,
+    draw_hand_with_strokes(c.cv, strokes_p=out_cubic(clamp01((c.lt - 0.10) / 0.30)), rot=35 * rk,
                            scale=0.92 + 0.08 * rk)
 
 
@@ -798,9 +823,8 @@ def s10_snapped(c):
     if c.t < 6.65:
         put(cv, "puppet", PUP_C[0], PUP_C[1] + (c.t - 6.55) * 900, PUP_H, treat="mono")
     else:
-        i = nframe("leash", c.t - 6.65, loop=True)
         # Denji, dropped onto all fours, still on Makima's leash
-        put(cv, "leash", W * 0.5, H * 0.98, 0.25, i=i, treat="mono", anchor=(0.5, 1.0))
+        put(cv, "leash", W * 0.5, H * 0.98, 0.25, i=0, treat="mono", anchor=(0.5, 1.0))
 
 
 @tl.post(7.85, 8.05)
@@ -849,23 +873,23 @@ def draw_mask(cv, y_off=0.0, hands_in=0.0, hands_up=1.0, alpha=1.0):
             ribbon(cv, p, 14, rgb("7E0B08"), 0, 1, a=0.85 * alpha, seed=k * 10 + j, rough=0.35)
     # two stone hands rising from the bottom corners, cupping the face
     up = (1 - hands_up) * H * 0.6
-    dx = hands_in * W * 0.07
+    dx = hands_in * W * 0.06
     for side in (-1, 1):
-        put(cv, "hand", MASK_C[0] + side * (W * 0.31 - dx), H * 1.03 + up, 0.56, treat="stonehand",
-            anchor=(0.80, 0.98), rot=side * 14, flip=side < 0, alpha=alpha)
+        put(cv, "hand", MASK_C[0] + side * (W * 0.36 - dx), H * 1.10 + up, 0.58, treat="stonehand",
+            anchor=(0.80, 0.98), rot=side * (24 - hands_in * 10), flip=side < 0, alpha=alpha)
 
 
 @tl.scene(8.65, 8.90)
 def s13_mask_drop(c):
     full_bg(c.cv, relief_bg())
-    k = out_cubic(clamp01(step(c.lt) / 0.20))
+    k = out_cubic(clamp01(step(c.lt) / 0.15))
     chainsaw_bar(c.cv, W * 0.085, H * 0.91 + k * H * 0.3, W * 0.915, H * 0.03)
     draw_mask(c.cv, y_off=mix(-H * 1.1, 0, k), hands_up=k)
 
 
-@tl.post(8.65, 8.76)
+@tl.post(8.65, 8.74)
 def p13(rgb_, c):
-    return dir_blur(rgb_, 0, 260)
+    return dir_blur(rgb_, 0, 260 * (1 - c.u * 0.6))
 
 
 @tl.scene(8.90, 10.65)
@@ -996,7 +1020,7 @@ def rain(cv, t, cols, n=46, seed=3, angle=45, speed=1500, a=1.0, vertical=False)
         s = ((base + ts * speed * rng.uniform(0.7, 1.3)) % (diag * 2)) - diag
         cx, cy = W / 2 + dx * s - dy * off, H / 2 + dy * s + dx * off
         col = cols[j % len(cols)]
-        cv.drawLine(cx, cy, cx - dx * ln, cy - dy * ln, paint(col, a * rng.uniform(0.5, 1.0), stroke=3.5 if not vertical else rng.uniform(3, 6), cap="butt"))
+        cv.drawLine(cx, cy, cx - dx * ln, cy - dy * ln, paint(col, a * rng.uniform(0.45, 0.9), stroke=3.0 if not vertical else rng.uniform(3, 6), cap="butt"))
 
 
 RAIN_COLS = [rgb("273150"), rgb("505D87"), rgb("A7B3ED"), rgb("A6E7F7"), rgb("638CD0"), HERO]
@@ -1007,22 +1031,33 @@ def flying_duo(cv, t, x=None, y=None, a=1.0):
     x = DUO_FLY[0] if x is None else x
     y = DUO_FLY[1] if y is None else y
     j = np.random.default_rng(int(step(t) * 12)).uniform(-5, 5, 2)
-    # glow trails (cyan -> blue -> red) streaming behind them, up-left
-    for k, col in enumerate([rgb("A6E7F7"), rgb("638CD0"), HERO]):
+    # soft glow trails streaming up-left behind them: cyan, then blue, then red
+    for k, col in enumerate([rgb("A6E7F7"), rgb("638CD0"), rgb("E86A5C")]):
         f = tint_filter(col, 1.0, keep_luma=False)
-        put(cv, "puppet", x - 250 - (k + 1) * 95 + j[0], y - 130 - (k + 1) * 55 + j[1], 0.36, treat="navy", rot=-30,
-            alpha=0.30 * a, cfilter=f, blur=14 + k * 8)
-        put(cv, "power_fly", x + 80 - (k + 1) * 95 + j[0], y + 50 - (k + 1) * 55 + j[1], 0.40, treat="navy",
-            alpha=0.30 * a, cfilter=f, blur=14 + k * 8)
-    put(cv, "puppet", x - 250 + j[0], y - 130 + j[1], 0.36, treat="navy", rot=-30, alpha=a)
-    put(cv, "power_fly", x + 80 + j[0], y + 50 + j[1], 0.40, treat="navy", alpha=a)
+        for name, dx, dy, h, rot in (("puppet", -150, -90, 0.26, -30), ("power_fly", 60, 30, 0.30, 0)):
+            put(cv, name, x + dx - (k + 1) * 70 + j[0], y + dy - (k + 1) * 42 + j[1], h, treat="navy", rot=rot,
+                alpha=0.26 * a, cfilter=f, blur=12 + k * 8)
+    put(cv, "puppet", x - 150 + j[0], y - 90 + j[1], 0.26, treat="navy", rot=-30, alpha=a)
+    put(cv, "power_fly", x + 60 + j[0], y + 30 + j[1], 0.30, treat="navy", alpha=a)
+
+
+def rails(cv, t):
+    """two long black diagonal rail lines with a travelling coloured light segment."""
+    for k, (off, col) in enumerate(((-260, rgb("55C0C9")), (-200, HERO))):
+        p0 = (W * 0.02 + off, -40)
+        p1 = (W * 0.02 + off + H * 1.25, H + 40)
+        pth = polyline([p0, p1])
+        line(cv, pth, 4, INK)
+        u = (step(t) * 0.55 + k * 0.4) % 1.2 - 0.1
+        line_part(cv, pth, max(0, u), min(1, u + 0.2), 5, col)
 
 
 @tl.scene(13.45, 17.60)
 def s20_flying(c):
     cv = c.cv
     t = c.t
-    rain(cv, t, RAIN_COLS)
+    rain(cv, t, RAIN_COLS, n=90)
+    rails(cv, t)
     flying_duo(cv, t)
     # a chainsaw passes bottom -> top-left every two beats (three blurred steps)
     for t0 in (13.80, 15.10, 16.40):
@@ -1066,10 +1101,10 @@ def s22_line_up(c):
         # Pochita bursts open: blood petals
         put(cv, "pochita", W * 0.5, H * 0.66 + (t - 18.75) * 2500, 0.69)
         splatter(cv, W * 0.5, H * 0.55, 300, rgb("B5120A"), p=(t - 18.75) / 0.1, seed=12)
-    sway = math.sin(lt * 6) * 60
+    sway = math.sin(lt * 5.5 + 0.6) * 140
     kink = clamp01((t - 19.70) / 0.1)
     top = mix(H * 0.6, -H * 0.1, out_cubic(clamp01(lt / 0.25)))
-    pts = [(W * 0.5, H * 1.05), (W * 0.5 - sway, H * 0.7), (W * 0.5 + sway, H * 0.35), (W * 0.5 + kink * 80, top)]
+    pts = [(W * 0.5, H * 1.05), (W * 0.5 - sway, H * 0.72), (W * 0.5 + sway * 0.8, H * 0.38), (W * 0.5 + sway * 0.3 + kink * 90, top)]
     brush(cv, bezier(*pts), 9, HERO, bristles=3, dry=0.0, seed=1, taper=0.08)
 
 
@@ -1092,27 +1127,46 @@ def s23_cone(c):
     cv.drawOval(skia.Rect(cx + 240 * s, cy - 125 * s, cx + 320 * s, cy + 45 * s), paint(rgb("19181C")))
 
 
-CLIMAX = [  # (start, cut-out, cx, cy, height, rotation, frame)  - a new framing every 0.1-0.3 s
-    (20.00, "arm", 0.55, 0.55, 1.25, 0, 0), (20.10, "arm", 0.38, 0.62, 1.90, -8, 1), (20.20, "saw", 0.55, 0.45, 1.10, -20, 0),
-    (20.30, "arm", 0.62, 0.48, 1.40, 6, 2), (20.40, "head", 0.50, 0.58, 1.20, 0, 0), (20.60, "arm", 0.46, 0.66, 2.30, -4, 3),
-    (20.80, "power_fly", 0.55, 0.55, 1.30, 12, 0), (21.10, "arm", 0.60, 0.52, 1.30, 10, 4), (21.20, "head", 0.42, 0.50, 1.55, 8, 0),
-    (21.40, "arm", 0.40, 0.58, 1.80, -10, 5), (21.50, "saw", 0.62, 0.50, 1.45, 8, 0), (21.60, "arm", 0.52, 0.50, 2.60, -6, 2),
+CLIMAX = [  # (start, cx, cy, height, rotation, frame, bar angle)  - Chainsaw Man re-framed every 0.1-0.3 s
+    (20.00, 0.55, 0.56, 1.20, 0, 0, -18), (20.10, 0.40, 0.62, 1.70, -8, 0, -10), (20.20, 0.62, 0.52, 1.30, 6, 3, -24),
+    (20.30, 0.46, 0.66, 1.90, -4, 3, -14), (20.40, 0.58, 0.52, 1.25, 10, 3, -30), (20.60, 0.40, 0.58, 1.20, -6, 5, -6),
+    (20.80, 0.60, 0.55, 1.45, 4, 0, -20), (21.10, 0.45, 0.62, 1.95, -6, 3, -12), (21.20, 0.55, 0.52, 1.35, 8, 5, -26),
+    (21.40, 0.42, 0.58, 1.80, -12, 0, -8), (21.50, 0.60, 0.54, 1.40, 6, 3, -22), (21.60, 0.50, 0.55, 1.75, 0, 5, -16),
 ]
+HEAD_INSERT = (20.40, 20.60)       # one close-up on the chainsaw head in the middle
+
+
+def red_bar(cv, x, y, ang, length, thick):
+    """the flat blood-red chainsaw bar (the reference's purple tube), with its dark tip."""
+    cv.save()
+    cv.translate(x, y)
+    cv.rotate(ang)
+    p = skia.Path()
+    p.moveTo(0, -thick * 0.42)
+    p.lineTo(length, -thick * 0.55)
+    p.lineTo(length, thick * 0.55)
+    p.lineTo(0, thick * 0.42)
+    p.close()
+    cv.drawPath(p, paint(HERO))
+    cv.drawOval(skia.Rect(length - thick * 0.25, -thick * 0.55, length + thick * 0.25, thick * 0.55), paint(rgb("19181C")))
+    cv.restore()
 
 
 @tl.scene(20.00, 21.70)
 def s24_climax(c):
     cv = c.cv
     t = c.t
-    cur = [f for f in CLIMAX if f[0] <= t][-1]
-    _, name, cx, cy, h, rot, i = cur
-    put(cv, name, cx * W, cy * H, h, i=min(i, len(cut(name)) - 1), rot=rot)
-    # the red chainsaw / tube carried through the shot, with sparks where it meets
-    ang = math.radians(-25 + rot)
-    x0, y0 = cx * W - 900 * math.cos(ang), cy * H - 900 * math.sin(ang)
-    brush(cv, polyline([(x0, y0), (cx * W + 200 * math.cos(ang), cy * H + 200 * math.sin(ang))]), 70, HERO, bristles=14,
-          dry=0.15, seed=int(t * 10), taper=0.02)
-    sparks(cv, cx * W + 200 * math.cos(ang), cy * H + 200 * math.sin(ang), t, size=200, seed=int(t * 10))
+    st, cx, cy, h, rot, i, bang = [f for f in CLIMAX if f[0] <= t][-1]
+    if HEAD_INSERT[0] <= t < HEAD_INSERT[1]:
+        put(cv, "head", W * 0.50, H * 0.58, 1.25)
+        red_bar(cv, W * 0.15, H * 0.80, -25, W * 0.9, H * 0.10)
+        sparks(cv, W * 0.62, H * 0.52, t, size=220, seed=3)
+        return
+    s_ = put(cv, "arm", cx * W, cy * H, h, i=min(i, len(cut("arm")) - 1), rot=rot)
+    # the bar leaves his hand toward the camera side and runs off frame
+    hx, hy = cx * W - 0.18 * h * H, cy * H - 0.05 * h * H
+    red_bar(cv, hx, hy, 180 + bang, W * 1.2, H * 0.09 * h)
+    sparks(cv, hx, hy, t, size=180 * h, seed=int(t * 10))
 
 
 @tl.scene(21.70, 22.55)
@@ -1126,17 +1180,25 @@ def s25_stroke(c):
 
 def wrapped_head(cv, x, y):
     hh = 0.70 * H
-    ys = [y - hh * 0.30 + k * hh * 0.12 for k in range(5)]
-    # the far side of each wrap passes behind the head (darker), then the near side crosses the face
-    for k, yy in enumerate(ys):
-        back = bezier((x + hh * 0.36, yy + 10), (x + hh * 0.16, yy - 75), (x - hh * 0.16, yy - 75), (x - hh * 0.36, yy + 10))
-        ribbon(cv, back, 80, HERO_DK, seed=40 + k, rough=0.18)
+    ys = [y - hh * 0.43 + k * hh * 0.115 for k in range(5)]
     put(cv, "face", x, y, 0.70)
+    layer(cv)
     for k, yy in enumerate(ys):
-        if k == 2:
+        if k == 3:
             continue                     # leave the eyes uncovered
-        front = bezier((x - hh * 0.37, yy + 5), (x - hh * 0.13, yy + 70), (x + hh * 0.13, yy + 70), (x + hh * 0.37, yy + 5))
-        ribbon(cv, front, 86, HERO, seed=30 + k, rough=0.16)
+        front = bezier((x - hh * 0.45, yy - 10), (x - hh * 0.15, yy + 60), (x + hh * 0.15, yy + 60), (x + hh * 0.45, yy - 25))
+        ribbon(cv, front, 92, HERO if k % 2 == 0 else rgb("C8160A"), seed=30 + k, rough=0.16)
+    # keep the paint only where the head is (plus a slight overhang)
+    im = img("face", 0, "dilate")
+    p = skia.Paint()
+    p.setBlendMode(skia.BlendMode.kDstIn)
+    s_ = 0.70 * H / img("face").height()
+    cv.save()
+    cv.translate(x, y)
+    cv.scale(s_, s_)
+    cv.drawImage(im, -im.width() / 2, -im.height() / 2, skia.SamplingOptions(), p)
+    cv.restore()
+    cv.restore()
 
 
 @tl.scene(22.55, 24.00)
@@ -1162,8 +1224,8 @@ def echoes(cv, t, kind, n):
         if q == 0:
             continue
         jy = np.random.default_rng(q * 7 + int(step(t) * 12)).uniform(-14, 14)
-        put(cv, "scream", W * 0.5 + q * sp, H + 4 + jy, 0.76, i=i, treat=kind if q % 2 else kind + "2", anchor=(0.5, 1.0))
-    put(cv, "scream", W * 0.5, H + 4, 0.90, i=i, anchor=(0.5, 1.0))
+        put(cv, "scream", W * 0.5 + q * sp, H + 4 + jy, 0.70, i=i, treat=kind if q % 2 else kind + "2", anchor=(0.5, 1.0))
+    put(cv, "scream", W * 0.5, H + 4, 0.80, i=i, treat="lift", anchor=(0.5, 1.0))
 
 
 @tl.scene(24.00, 24.70)
@@ -1277,23 +1339,23 @@ POCH_C = (W * 0.5, H * 0.50)
 def s35_cord(c):
     cv = c.cv
     t = c.t
-    put(cv, "pochita", POCH_C[0], POCH_C[1], 0.65)
+    put(cv, "pochita", POCH_C[0], POCH_C[1] + H * 0.06, 0.78)
     lit = clamp01((t - 27.75) / 0.15)
     pull = out_cubic(clamp01((t - 27.75) / 0.15)) if t >= 27.75 else 0.0
     root = (POCH_C[0] - 8, POCH_C[1] - H * 0.27)
-    hx, hy = mix(W * 0.66, W * 0.76, pull), mix(H * 0.12, H * 0.02, pull)
+    hx, hy = mix(W * 0.62, W * 0.74, pull), mix(H * 0.16, H * 0.04, pull)
     if t < 27.70:
-        hx, hy = W * 0.66, H * 0.12
+        hx, hy = W * 0.62, H * 0.16
     line(cv, polyline([root, (hx, hy)]), 6, INK)
     cv.drawRect(skia.Rect(hx - 26, hy - 9, hx + 26, hy + 9), paint(INK))
     if t >= 27.70:
         f = cut("hand").frames[0]
         (px, py) = hand_tips()[0]
         k_in = out_cubic(clamp01((t - 27.70) / 0.06))
-        put(cv, "hand", hx + (1 - k_in) * 300, hy - (1 - k_in) * 200, 0.42, anchor=(px / f.shape[1], py / f.shape[0]), rot=-25)
+        put(cv, "hand", hx + (1 - k_in) * 300, hy - (1 - k_in) * 200, 0.62, anchor=(px / f.shape[1], py / f.shape[0]), rot=-25)
     if lit > 0:
         for ex in (-0.21, 0.21):
-            cv.drawCircle(POCH_C[0] + ex * H * 0.65 * 0.62, POCH_C[1] + H * 0.035, H * 0.05, paint(rgb("01E1FD"), lit * 0.85, blur=8))
+            cv.drawCircle(POCH_C[0] + ex * H * 0.78 * 0.62, POCH_C[1] + H * 0.06 + H * 0.042, H * 0.06, paint(rgb("01E1FD"), lit * 0.85, blur=8))
 
 
 @tl.scene(28.50, 29.80)
@@ -1331,7 +1393,7 @@ def p37(rgb_, c):
     return dir_blur(rgb_, 500, 0)
 
 
-ARM_POSE = dict(cx=W * 0.64, cy=H * 0.36, h=0.48, rot=-28, treat="steel")
+ARM_POSE = dict(cx=W * 0.70, cy=H * 0.30, h=0.36, rot=-28, treat="steel")
 
 
 def arm_drop(cv, t, y=0.0, treat="steel"):
