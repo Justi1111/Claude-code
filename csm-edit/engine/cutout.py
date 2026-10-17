@@ -60,17 +60,24 @@ def grabcut(rgb, rect, init=None, iters=6):
     return cv2.GaussianBlur(a, (0, 0), 1.0)
 
 
-def refine(alpha, rgb=None, erode=1, feather=0.8, lo=0.25, hi=0.75):
-    """tighten a soft matte: contrast-stretch, small erode, light feather, drop specks."""
+def refine(alpha, rgb=None, erode=1, feather=0.8, lo=0.25, hi=0.75, min_comp=0.02, keep_largest=False):
+    """tighten a soft matte: contrast-stretch, small erode, light feather, drop specks / stray islands."""
     a = np.clip((alpha - lo) / (hi - lo), 0, 1)
     if erode > 0:
         a = cv2.erode(a, np.ones((2 * erode + 1, 2 * erode + 1), np.uint8))
     n, lab, stats, _ = cv2.connectedComponentsWithStats((a > 0.5).astype(np.uint8), 8)
     if n > 2:
         keep = np.zeros(n, bool)
-        big = stats[1:, cv2.CC_STAT_AREA].max()
-        keep[1:] = stats[1:, cv2.CC_STAT_AREA] >= max(400, big * 0.02)
-        a = a * keep[lab]
+        areas = stats[1:, cv2.CC_STAT_AREA]
+        big = areas.max()
+        if keep_largest:
+            keep[1 + int(np.argmax(areas))] = True
+        else:
+            keep[1:] = areas >= max(400, big * min_comp)
+        # soft edge pixels belong to their nearest kept island
+        m = keep[lab].astype(np.float32)
+        m = cv2.dilate(m, np.ones((5, 5), np.uint8))
+        a = a * m
     if feather > 0:
         a = cv2.GaussianBlur(a, (0, 0), feather)
     return a
@@ -95,11 +102,12 @@ class Cut:
     """frames of a cut-out. cut.frames[i] = RGBA uint8 (cropped), cut.offsets[i] = (x, y) of the crop in the source."""
 
     def __init__(self, vid, t0, t1=None, fps=12, crop=None, erode=1, feather=0.8, lo=0.25, hi=0.75, mask_fn=None,
-                 name=None, gc_rect=None, gc_seed=False):
+                 name=None, gc_rect=None, gc_seed=False, min_comp=0.02, keep_largest=False):
         self.vid, self.t0, self.t1 = vid, t0, (t1 if t1 is not None else t0 + 0.5 / fps)
         self.fps = fps
-        key = json.dumps([vid, round(t0, 3), round(self.t1, 3), fps, crop, erode, feather, lo, hi, name, gc_rect, gc_seed],
-                         sort_keys=True)
+        key = json.dumps([vid, round(t0, 3), round(self.t1, 3), fps, crop, erode, feather, lo, hi, name, gc_rect, gc_seed,
+                          min_comp, keep_largest, getattr(mask_fn, "version", None)], sort_keys=True)
+        self.min_comp, self.keep_largest = min_comp, keep_largest
         self.gc_rect, self.gc_seed = gc_rect, gc_seed
         self.key = (name + "_" if name else "") + hashlib.md5(key.encode()).hexdigest()[:10]
         self.dir = f"{CACHE}/{self.key}"
@@ -135,7 +143,7 @@ class Cut:
         offsets = []
         for i, (f, a) in enumerate(zip(frames, sm)):
             sub = f[y0:y1, x0:x1]
-            a = refine(a, sub, erode, feather, lo, hi)
+            a = refine(a, sub, erode, feather, lo, hi, self.min_comp, self.keep_largest)
             if mask_fn is not None:
                 a = a * mask_fn(sub.shape[:2])
             ys, xs = np.where(a > 0.03)
