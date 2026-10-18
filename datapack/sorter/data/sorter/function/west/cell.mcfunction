@@ -1,4 +1,4 @@
-fill ~-4 ~-8 ~-7 ~1 ~0 ~10 minecraft:air
+fill ~-4 ~-8 ~-7 ~1 ~0 ~10 minecraft:air strict
 setblock ~0 ~0 ~0 minecraft:chest[facing=south,type=right]
 setblock ~1 ~0 ~0 minecraft:chest[facing=south,type=left]
 setblock ~-1 ~-2 ~0 minecraft:stone

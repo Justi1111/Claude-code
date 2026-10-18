@@ -1,4 +1,4 @@
-fill ~-14 ~-10 ~-10 ~-2 ~0 ~7 minecraft:air
+fill ~-14 ~-10 ~-10 ~-2 ~0 ~7 minecraft:air strict
 setblock ~-14 ~-9 ~0 minecraft:stone
 setblock ~-12 ~-10 ~0 minecraft:stone
 setblock ~-11 ~-10 ~0 minecraft:stone

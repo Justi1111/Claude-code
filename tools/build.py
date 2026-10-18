@@ -8,7 +8,7 @@ ORDER = {"stone": 0, "glass": 0, "chest": 0, "hopper": 1, "dropper": 1,
 
 def clear(x0, y0, z0, x1, y1, z1, block="air"):
     for y in range(y0, y1 + 1):
-        out = fill(x0, y, z0, x1, y, z1, block)
+        out = fill(x0, y, z0, x1, y, z1, block + " strict")   # strict: nothing pops off
         if "Successfully" not in out and "No blocks" not in out:
             raise RuntimeError(out)
 

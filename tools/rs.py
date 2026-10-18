@@ -99,7 +99,8 @@ class Layout:
         out = Layout()
         for p, b in self.blocks.items():
             out.blocks[(p[0] + dx, p[1] + dy, p[2] + dz)] = b
-        out.taps = {k: (v[0] + dx, v[1] + dy, v[2] + dz) for k, v in self.taps.items()}
+        move = lambda v: (v[0] + dx, v[1] + dy, v[2] + dz)
+        out.taps = {k: [move(p) for p in v] if isinstance(v, list) else move(v) for k, v in self.taps.items()}
         return out
 
     def merge(self, other):

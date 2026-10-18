@@ -12,6 +12,7 @@ import os
 import shutil
 
 import cell
+import nbt
 import seq
 from rs import Layout
 
@@ -82,7 +83,8 @@ def clear_box(L, k, origin=(0, 0, 0)):
     pts = [rot_pos(tuple(a - o for a, o in zip(p, origin)), k) for p in L.blocks]
     lo = [min(p[i] for p in pts) for i in range(3)]
     hi = [max(p[i] for p in pts) for i in range(3)]
-    return f"fill ~{lo[0]} ~{lo[1]} ~{lo[2]} ~{hi[0]} ~{hi[1]} ~{hi[2]} minecraft:air"
+    # strict: no shape updates while clearing, so old redstone does not drop as items
+    return f"fill ~{lo[0]} ~{lo[1]} ~{lo[2]} ~{hi[0]} ~{hi[1]} ~{hi[2]} minecraft:air strict"
 
 
 def cell_part():
@@ -114,6 +116,83 @@ def east_part():
             L.blocks.setdefault(p, b)
     out = Layout()
     out.blocks = {(p[0] - n * cell.PITCH, p[1], p[2]): b for p, b in L.blocks.items()}
+    return out
+
+
+DATA_VERSION = 5023                                # world_version of Minecraft Java 26.3
+BOX_Y = (-10, 0)                                   # every structure piece shares this y/z box
+BOX_Z = (-10, 7)
+
+
+def _state(block, layout, pos):
+    from rs import parse, dust_connections, DIRS as RDIRS
+    bid, props = parse(block)
+    props = dict(props)
+    defaults = {"repeater": {"locked": "false", "powered": "false"},
+                "comparator": {"powered": "false"}, "observer": {"powered": "false"},
+                "hopper": {"enabled": "true"}, "dropper": {"triggered": "false"},
+                "chest": {"type": "single", "waterlogged": "false"}, "ladder": {"waterlogged": "false"},
+                "redstone_torch": {"lit": "true"}, "redstone_wall_torch": {"lit": "true"},
+                "lever": {"powered": "false"}}
+    for k, v in defaults.get(bid, {}).items():
+        props.setdefault(k, v)
+    if bid == "redstone_wire":
+        conn = dust_connections(layout, pos)
+        names = {(0, 0, -1): "north", (0, 0, 1): "south", (1, 0, 0): "east", (-1, 0, 0): "west"}
+        for d, n in names.items():
+            props[n] = conn.get(d, "none")
+        props["power"] = "0"
+    # 26.3 palette entries use lower-case keys (older files are upgraded by the data fixer)
+    return {"id": "minecraft:" + bid, "properties": props} if props else {"id": "minecraft:" + bid}
+
+
+def structure(L, x0, x1, context=None):
+    """Structure template of L's blocks with x in [x0, x1] and the common y/z box.
+
+    Empty positions become air so loading clears whatever was there.
+    `context` (a bigger layout) is used for dust shapes at the piece edges."""
+    ctx = context or L
+    palette, index, blocks = [], {}, []
+    for x in range(x0, x1 + 1):
+        for y in range(BOX_Y[0], BOX_Y[1] + 1):
+            for z in range(BOX_Z[0], BOX_Z[1] + 1):
+                b = L.blocks.get((x, y, z))
+                st = _state(b.block, ctx, (x, y, z)) if b else {"id": "minecraft:air"}
+                key = repr(st)
+                if key not in index:
+                    index[key] = len(palette)
+                    palette.append(st)
+                entry = {"pos": [x - x0, y - BOX_Y[0], z - BOX_Z[0]], "state": index[key]}
+                if b is not None and b.note == "T probe":
+                    entry["nbt"] = {"id": "minecraft:hopper", "Items": [
+                        {"Slot": nbt.Byte(slot), "id": BLOCKER["id"], "count": n,
+                         "components": {"minecraft:custom_name": BLOCKER["name"]}}
+                        for slot, n in ((1, 6), (2, 6), (3, 5), (4, 5))]}
+                blocks.append(entry)
+    return {"DataVersion": DATA_VERSION,
+            "size": [x1 - x0 + 1, BOX_Y[1] - BOX_Y[0] + 1, BOX_Z[1] - BOX_Z[0] + 1],
+            "palette": palette, "blocks": blocks, "entities": []}
+
+
+def write_structures(root):
+    """sorter_1..sorter_5 (complete warehouses) and sorter_west / _cell / _east pieces."""
+    os.makedirs(root, exist_ok=True)
+    out = []
+    for n in range(1, 6):
+        L = seq.warehouse(n)
+        x1 = max(p[0] for p in L.blocks)
+        assert x1 + 15 <= 48, n
+        path = os.path.join(root, f"sorter_{n}.nbt")
+        nbt.write(path, structure(L, -14, x1))
+        out.append(path)
+    big = seq.warehouse(3)
+    pieces = {"sorter_west": (west_part(), -14, -2, big),
+              "sorter_cell": (cell_part(), -1, cell.PITCH - 2, big.shifted(-cell.PITCH)),
+              "sorter_east": (east_part(), -1, 2, big.shifted(-3 * cell.PITCH))}
+    for name, (L, x0, x1, ctx) in pieces.items():
+        path = os.path.join(root, name + ".nbt")
+        nbt.write(path, structure(L, x0, x1, ctx))
+        out.append(path)
     return out
 
 
@@ -170,3 +249,6 @@ if __name__ == "__main__":
     import sys
     out = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__), "..", "datapack", "sorter")
     print(write_pack(os.path.abspath(out)))
+    here = os.path.dirname(os.path.abspath(__file__))
+    for p in write_structures(os.path.join(here, "..", "structures")):
+        print(os.path.abspath(p))
