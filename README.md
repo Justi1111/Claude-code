@@ -28,7 +28,10 @@
 потому что блок структур выдаётся только командой.
 
 1. Скопируйте файлы из папки `structures/` в папку мира
-   `generated/minecraft/structure/` (создайте её, если нет).
+   `generated/minecraft/structure/`. В новом мире папки `generated` нет — игра
+   создаёт её только при первом сохранении структуры, поэтому создайте все три
+   папки (`generated`, внутри `minecraft`, внутри `structure`) вручную. Если
+   копировали при запущенном мире — выполните `/reload` или перезайдите.
    Одиночная игра: `.minecraft/saves/<мир>/generated/minecraft/structure/`,
    сервер: `<папка мира>/generated/minecraft/structure/`.
    Готовые склады: `sorter_1` … `sorter_5` (число — сколько ячеек).
